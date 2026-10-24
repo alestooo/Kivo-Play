@@ -1,0 +1,100 @@
+---
+import '../styles/global.css';
+
+interface Props {
+  title?: string;
+  description?: string;
+}
+
+const {
+  title = 'Kivo Play',
+  description =
+    'Fast multiplayer mini-games powered by Astro and Rust.'
+} = Astro.props;
+---
+
+<!doctype html>
+
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1"
+    />
+
+    <meta
+      name="description"
+      content={description}
+    />
+
+    <meta
+      name="theme-color"
+      content="#08090d"
+    />
+
+    <link
+      rel="icon"
+      href="/favicon.ico"
+    />
+
+    <title>{title}</title>
+  </head>
+
+  <body>
+    <div
+      class="background-effects"
+      aria-hidden="true"
+    >
+    </div>
+
+    <header class="site-nav">
+      <a
+        class="brand"
+        href="/"
+      >
+        <span class="brand-mark">
+          K
+        </span>
+
+        <span>
+          Kivo Play
+        </span>
+
+        <small>
+          ALPHA
+        </small>
+      </a>
+
+      <nav>
+        <a href="/">
+          Home
+        </a>
+
+        <a href="/games">
+          Games
+        </a>
+
+        <a
+          class="nav-play"
+          href="/play"
+        >
+          Play
+        </a>
+      </nav>
+    </header>
+
+    <slot />
+
+    <footer class="site-footer">
+      <span>
+        Kivo Play
+      </span>
+
+      <span>
+        Play fast. Play together.
+      </span>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,330 @@
+---
+import BaseLayout
+  from '../layouts/BaseLayout.astro';
+
+const games = [
+  {
+    name: 'Flux',
+    category: 'Cards',
+    players: '1–4 Players',
+    description:
+      'Fast competitive card battles built around dynamic families, effects and tactical disruption.',
+    status: 'Planned',
+    accent: 'flux'
+  },
+  {
+    name: 'SudoRush',
+    category: 'Puzzle',
+    players: '1–4 Players',
+    description:
+      'Competitive Sudoku where speed, accuracy and pressure turn a classic puzzle into a race.',
+    status: 'Planned',
+    accent: 'sudoku'
+  },
+  {
+    name: 'Stackfall',
+    category: 'Arcade',
+    players: '1–4 Players',
+    description:
+      'Fast falling-block action designed for sprints, battles and competitive multiplayer.',
+    status: 'Planned',
+    accent: 'stack'
+  },
+  {
+    name: 'Diceforge',
+    category: 'Strategy',
+    players: '1–4 Players',
+    description:
+      'A dice-based strategy game focused on combinations, modifiers, bonuses and risky decisions.',
+    status: 'Planned',
+    accent: 'dice'
+  },
+  {
+    name: 'Crownshift',
+    category: 'Strategy',
+    players: '1–2 Players',
+    description:
+      'A future chess-inspired competitive game with fast and experimental match formats.',
+    status: 'Future',
+    accent: 'crown'
+  },
+  {
+    name: 'Pocket Putt',
+    category: 'Sports',
+    players: '1–4 Players',
+    description:
+      'Multiplayer miniature golf with quick courses, trick shots and competitive modes.',
+    status: 'Future',
+    accent: 'putt'
+  }
+];
+---
+
+<BaseLayout
+  title="Games — Kivo Play"
+  description="Explore the games planned for Kivo Play."
+>
+  <main class="games-page container">
+    <header class="games-header">
+      <span>
+        KIVO LIBRARY
+      </span>
+
+      <h1>
+        Games
+      </h1>
+
+      <p>
+        Small games with their own
+        identity, connected by the same
+        multiplayer platform.
+      </p>
+    </header>
+
+    <div class="games-grid">
+      {
+        games.map((game) => (
+          <article
+            class:list={[
+              'game-card',
+              game.accent
+            ]}
+          >
+            <div class="game-top">
+              <span>
+                {game.category}
+              </span>
+
+              <small>
+                {game.status}
+              </small>
+            </div>
+
+            <div
+              class="game-art"
+              aria-hidden="true"
+            >
+              <span>
+                {game.name
+                  .charAt(0)}
+              </span>
+            </div>
+
+            <h2>
+              {game.name}
+            </h2>
+
+            <strong>
+              {game.players}
+            </strong>
+
+            <p>
+              {game.description}
+            </p>
+
+            <div class="game-status">
+              In development
+            </div>
+          </article>
+        ))
+      }
+    </div>
+  </main>
+</BaseLayout>
+
+<style>
+  .games-page {
+    padding-top: 6rem;
+    padding-bottom: 7rem;
+  }
+
+  .games-header {
+    max-width: 700px;
+
+    margin-bottom: 3rem;
+  }
+
+  .games-header > span {
+    color: #c084fc;
+
+    font-size: 0.7rem;
+    font-weight: 900;
+
+    letter-spacing: 0.15em;
+  }
+
+  .games-header h1 {
+    margin:
+      0.5rem 0;
+
+    font-size:
+      clamp(
+        3rem,
+        7vw,
+        5rem
+      );
+
+    letter-spacing:
+      -0.05em;
+  }
+
+  .games-header p {
+    margin: 0;
+
+    color:
+      rgba(255, 255, 255, 0.5);
+
+    font-size: 1.05rem;
+
+    line-height: 1.7;
+  }
+
+  .games-grid {
+    display: grid;
+
+    grid-template-columns:
+      repeat(3, 1fr);
+
+    gap: 1rem;
+  }
+
+  .game-card {
+    position: relative;
+
+    overflow: hidden;
+
+    padding: 1.4rem;
+
+    border:
+      1px solid
+      rgba(255, 255, 255, 0.08);
+
+    border-radius: 22px;
+
+    background:
+      rgba(255, 255, 255, 0.025);
+
+    transition:
+      transform 180ms ease,
+      border-color 180ms ease;
+  }
+
+  .game-card:hover {
+    transform:
+      translateY(-4px);
+
+    border-color:
+      rgba(192, 132, 252, 0.25);
+  }
+
+  .game-top {
+    display: flex;
+
+    justify-content:
+      space-between;
+
+    align-items: center;
+  }
+
+  .game-top span,
+  .game-top small {
+    font-size: 0.65rem;
+    font-weight: 900;
+
+    letter-spacing: 0.08em;
+
+    text-transform:
+      uppercase;
+  }
+
+  .game-top span {
+    color: #d8b4fe;
+  }
+
+  .game-top small {
+    opacity: 0.35;
+  }
+
+  .game-art {
+    height: 180px;
+
+    display: grid;
+    place-items: center;
+
+    margin:
+      1.2rem 0;
+
+    border-radius: 17px;
+
+    background:
+      radial-gradient(
+        circle at center,
+        rgba(168, 85, 247, 0.18),
+        rgba(255, 255, 255, 0.02)
+      );
+  }
+
+  .game-art span {
+    font-size: 5rem;
+    font-weight: 950;
+
+    opacity: 0.7;
+  }
+
+  .game-card h2 {
+    margin:
+      0 0 0.25rem;
+
+    font-size: 1.5rem;
+  }
+
+  .game-card > strong {
+    color:
+      rgba(255, 255, 255, 0.45);
+
+    font-size: 0.72rem;
+  }
+
+  .game-card p {
+    min-height: 78px;
+
+    color:
+      rgba(255, 255, 255, 0.5);
+
+    line-height: 1.55;
+
+    font-size: 0.88rem;
+  }
+
+  .game-status {
+    padding-top: 1rem;
+
+    border-top:
+      1px solid
+      rgba(255, 255, 255, 0.06);
+
+    color:
+      rgba(255, 255, 255, 0.3);
+
+    font-size: 0.68rem;
+    font-weight: 800;
+  }
+
+  @media (
+    max-width: 900px
+  ) {
+    .games-grid {
+      grid-template-columns:
+        repeat(2, 1fr);
+    }
+  }
+
+  @media (
+    max-width: 600px
+  ) {
+    .games-grid {
+      grid-template-columns:
+        1fr;
+    }
+  }
+</style>

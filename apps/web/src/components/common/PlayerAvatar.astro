@@ -1,0 +1,71 @@
+---
+interface Props {
+  name: string;
+  size?: 'small' | 'medium' | 'large';
+}
+
+const {
+  name,
+  size = 'medium'
+} = Astro.props;
+
+const initial =
+  name.trim().charAt(0).toUpperCase() || '?';
+---
+
+<div
+  class:list={[
+    'player-avatar',
+    `player-avatar-${size}`
+  ]}
+  aria-label={`Avatar for ${name}`}
+>
+  {initial}
+</div>
+
+<style>
+  .player-avatar {
+    display: grid;
+    place-items: center;
+
+    flex: 0 0 auto;
+
+    border-radius: 14px;
+
+    color: white;
+
+    background:
+      linear-gradient(
+        135deg,
+        #7c3aed,
+        #4f46e5
+      );
+
+    font-weight: 900;
+
+    box-shadow:
+      0 8px 30px
+      rgba(124, 58, 237, 0.2);
+  }
+
+  .player-avatar-small {
+    width: 34px;
+    height: 34px;
+
+    font-size: 0.85rem;
+  }
+
+  .player-avatar-medium {
+    width: 44px;
+    height: 44px;
+
+    font-size: 1rem;
+  }
+
+  .player-avatar-large {
+    width: 60px;
+    height: 60px;
+
+    font-size: 1.3rem;
+  }
+</style>

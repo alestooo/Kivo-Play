@@ -1,5 +1,10 @@
 {
   "extends": "astro/tsconfigs/strict",
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
   "include": [
     ".astro/types.d.ts",
     "src/**/*.astro",
@@ -7,7 +12,9 @@
     "src/**/*.tsx",
     "src/**/*.js",
     "src/**/*.jsx",
-    "src/**/*.svelte"
+    "src/**/*.svelte",
+    "astro.config.mjs",
+    "svelte.config.js"
   ],
   "exclude": [
     "dist",

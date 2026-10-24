@@ -13,11 +13,16 @@ use tokio::sync::{RwLock, mpsc};
 use tracing::{info, warn};
 use uuid::Uuid;
 
-const ROOM_CODE_CHARS: &[u8] = b"ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+const ROOM_CODE_LETTERS: &[u8] = b"ABCDEFGHJKMNPQRSTUVWXYZ";
+
+const ROOM_CODE_DIGITS: &[u8] = b"23456789";
+
 const ROOM_CODE_LENGTH: usize = 6;
 const TURN_ORDER_DICE: usize = 3;
+const ROOMS_PER_PAGE: usize = 25;
 
 type SharedRooms = Arc<RwLock<HashMap<String, Room>>>;
+
 type ClientSender = mpsc::UnboundedSender<ServerMessage>;
 
 #[derive(Clone)]
@@ -26,6 +31,8 @@ struct AppState {
 }
 
 struct Room {
+    id: Uuid,
+    name: String,
     host_id: Uuid,
     max_players: u8,
     visibility: RoomVisibility,
@@ -86,6 +93,7 @@ enum ClientMessage {
 
     CreateRoom {
         player_name: String,
+        room_name: String,
         max_players: u8,
         visibility: String,
     },
@@ -93,6 +101,16 @@ enum ClientMessage {
     JoinRoom {
         player_name: String,
         room_code: String,
+    },
+
+    JoinPublicRoom {
+        player_name: String,
+        room_id: Uuid,
+    },
+
+    ListRooms {
+        page: usize,
+        search: String,
     },
 
     SetReady {
@@ -113,6 +131,7 @@ enum ServerMessage {
 
     RoomCreated {
         room_code: String,
+        room_name: String,
         player_id: Uuid,
         host_id: Uuid,
         max_players: u8,
@@ -123,6 +142,7 @@ enum ServerMessage {
 
     RoomJoined {
         room_code: String,
+        room_name: String,
         player_id: Uuid,
         host_id: Uuid,
         max_players: u8,
@@ -133,11 +153,19 @@ enum ServerMessage {
 
     RoomState {
         room_code: String,
+        room_name: String,
         host_id: Uuid,
         max_players: u8,
         visibility: String,
         state: String,
         players: Vec<PlayerResponse>,
+    },
+
+    RoomDirectory {
+        rooms: Vec<RoomSummary>,
+        page: usize,
+        total_pages: usize,
+        total_rooms: usize,
     },
 
     TurnOrderStarted {
@@ -165,6 +193,17 @@ struct PlayerResponse {
     name: String,
     is_host: bool,
     ready: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct RoomSummary {
+    room_id: Uuid,
+    room_name: String,
+    host_name: String,
+    visibility: String,
+    player_count: usize,
+    max_players: u8,
+    joinable: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -226,6 +265,7 @@ async fn handle_socket(mut socket: WebSocket, state: AppState) {
     let (outgoing_tx, mut outgoing_rx) = mpsc::unbounded_channel::<ServerMessage>();
 
     let mut current_room: Option<String> = None;
+
     let mut current_player: Option<Uuid> = None;
 
     loop {
@@ -233,30 +273,48 @@ async fn handle_socket(mut socket: WebSocket, state: AppState) {
             incoming = socket.recv() => {
                 match incoming {
                     Some(Ok(Message::Text(text))) => {
-                        info!("Received message: {}", text);
-
                         let parsed =
                             serde_json::from_str::<ClientMessage>(&text);
 
                         match parsed {
                             Ok(ClientMessage::Ping) => {
                                 let _ =
-                                    outgoing_tx.send(ServerMessage::Pong);
+                                    outgoing_tx.send(
+                                        ServerMessage::Pong
+                                    );
+                            }
+
+                            Ok(ClientMessage::ListRooms {
+                                page,
+                                search,
+                            }) => {
+                                let message =
+                                    list_rooms(
+                                        &state,
+                                        page,
+                                        search,
+                                    )
+                                    .await;
+
+                                let _ =
+                                    outgoing_tx.send(
+                                        message
+                                    );
                             }
 
                             Ok(ClientMessage::CreateRoom {
                                 player_name,
+                                room_name,
                                 max_players,
                                 visibility,
                             }) => {
                                 if current_room.is_some() {
-                                    let _ = outgoing_tx.send(
-                                        ServerMessage::Error {
-                                            message:
+                                    let _ =
+                                        outgoing_tx.send(
+                                            server_error(
                                                 "You are already inside a room"
-                                                    .to_string(),
-                                        },
-                                    );
+                                            )
+                                        );
 
                                     continue;
                                 }
@@ -265,6 +323,7 @@ async fn handle_socket(mut socket: WebSocket, state: AppState) {
                                     &state,
                                     outgoing_tx.clone(),
                                     player_name,
+                                    room_name,
                                     max_players,
                                     visibility,
                                 )
@@ -276,13 +335,19 @@ async fn handle_socket(mut socket: WebSocket, state: AppState) {
                                         response,
                                     )) => {
                                         current_room =
-                                            Some(room_code.clone());
+                                            Some(
+                                                room_code.clone()
+                                            );
 
                                         current_player =
-                                            Some(player_id);
+                                            Some(
+                                                player_id
+                                            );
 
                                         let _ =
-                                            outgoing_tx.send(response);
+                                            outgoing_tx.send(
+                                                response
+                                            );
 
                                         broadcast_room_state(
                                             &state,
@@ -293,7 +358,9 @@ async fn handle_socket(mut socket: WebSocket, state: AppState) {
 
                                     Err(error) => {
                                         let _ =
-                                            outgoing_tx.send(error);
+                                            outgoing_tx.send(
+                                                error
+                                            );
                                     }
                                 }
                             }
@@ -303,18 +370,17 @@ async fn handle_socket(mut socket: WebSocket, state: AppState) {
                                 room_code,
                             }) => {
                                 if current_room.is_some() {
-                                    let _ = outgoing_tx.send(
-                                        ServerMessage::Error {
-                                            message:
+                                    let _ =
+                                        outgoing_tx.send(
+                                            server_error(
                                                 "You are already inside a room"
-                                                    .to_string(),
-                                        },
-                                    );
+                                            )
+                                        );
 
                                     continue;
                                 }
 
-                                match join_room(
+                                match join_room_by_code(
                                     &state,
                                     outgoing_tx.clone(),
                                     player_name,
@@ -328,13 +394,19 @@ async fn handle_socket(mut socket: WebSocket, state: AppState) {
                                         response,
                                     )) => {
                                         current_room =
-                                            Some(room_code.clone());
+                                            Some(
+                                                room_code.clone()
+                                            );
 
                                         current_player =
-                                            Some(player_id);
+                                            Some(
+                                                player_id
+                                            );
 
                                         let _ =
-                                            outgoing_tx.send(response);
+                                            outgoing_tx.send(
+                                                response
+                                            );
 
                                         broadcast_room_state(
                                             &state,
@@ -345,12 +417,75 @@ async fn handle_socket(mut socket: WebSocket, state: AppState) {
 
                                     Err(error) => {
                                         let _ =
-                                            outgoing_tx.send(error);
+                                            outgoing_tx.send(
+                                                error
+                                            );
                                     }
                                 }
                             }
 
-                            Ok(ClientMessage::SetReady { ready }) => {
+                            Ok(ClientMessage::JoinPublicRoom {
+                                player_name,
+                                room_id,
+                            }) => {
+                                if current_room.is_some() {
+                                    let _ =
+                                        outgoing_tx.send(
+                                            server_error(
+                                                "You are already inside a room"
+                                            )
+                                        );
+
+                                    continue;
+                                }
+
+                                match join_public_room(
+                                    &state,
+                                    outgoing_tx.clone(),
+                                    player_name,
+                                    room_id,
+                                )
+                                .await
+                                {
+                                    Ok((
+                                        room_code,
+                                        player_id,
+                                        response,
+                                    )) => {
+                                        current_room =
+                                            Some(
+                                                room_code.clone()
+                                            );
+
+                                        current_player =
+                                            Some(
+                                                player_id
+                                            );
+
+                                        let _ =
+                                            outgoing_tx.send(
+                                                response
+                                            );
+
+                                        broadcast_room_state(
+                                            &state,
+                                            &room_code,
+                                        )
+                                        .await;
+                                    }
+
+                                    Err(error) => {
+                                        let _ =
+                                            outgoing_tx.send(
+                                                error
+                                            );
+                                    }
+                                }
+                            }
+
+                            Ok(ClientMessage::SetReady {
+                                ready,
+                            }) => {
                                 let (
                                     Some(room_code),
                                     Some(player_id),
@@ -359,13 +494,12 @@ async fn handle_socket(mut socket: WebSocket, state: AppState) {
                                     current_player,
                                 )
                                 else {
-                                    let _ = outgoing_tx.send(
-                                        ServerMessage::Error {
-                                            message:
+                                    let _ =
+                                        outgoing_tx.send(
+                                            server_error(
                                                 "You are not inside a room"
-                                                    .to_string(),
-                                        },
-                                    );
+                                            )
+                                        );
 
                                     continue;
                                 };
@@ -380,7 +514,9 @@ async fn handle_socket(mut socket: WebSocket, state: AppState) {
                                     .await
                                 {
                                     let _ =
-                                        outgoing_tx.send(error);
+                                        outgoing_tx.send(
+                                            error
+                                        );
                                 }
                             }
 
@@ -393,13 +529,12 @@ async fn handle_socket(mut socket: WebSocket, state: AppState) {
                                     current_player,
                                 )
                                 else {
-                                    let _ = outgoing_tx.send(
-                                        ServerMessage::Error {
-                                            message:
+                                    let _ =
+                                        outgoing_tx.send(
+                                            server_error(
                                                 "You are not inside a room"
-                                                    .to_string(),
-                                        },
-                                    );
+                                            )
+                                        );
 
                                     continue;
                                 };
@@ -413,7 +548,9 @@ async fn handle_socket(mut socket: WebSocket, state: AppState) {
                                     .await
                                 {
                                     let _ =
-                                        outgoing_tx.send(error);
+                                        outgoing_tx.send(
+                                            error
+                                        );
                                 }
                             }
 
@@ -428,13 +565,12 @@ async fn handle_socket(mut socket: WebSocket, state: AppState) {
                                     current_player,
                                 )
                                 else {
-                                    let _ = outgoing_tx.send(
-                                        ServerMessage::Error {
-                                            message:
+                                    let _ =
+                                        outgoing_tx.send(
+                                            server_error(
                                                 "You are not inside a room"
-                                                    .to_string(),
-                                        },
-                                    );
+                                            )
+                                        );
 
                                     continue;
                                 };
@@ -449,7 +585,9 @@ async fn handle_socket(mut socket: WebSocket, state: AppState) {
                                     .await
                                 {
                                     let _ =
-                                        outgoing_tx.send(error);
+                                        outgoing_tx.send(
+                                            error
+                                        );
                                 }
                             }
 
@@ -459,39 +597,48 @@ async fn handle_socket(mut socket: WebSocket, state: AppState) {
                                     error
                                 );
 
-                                let _ = outgoing_tx.send(
-                                    ServerMessage::Error {
-                                        message:
-                                            "Invalid message".to_string(),
-                                    },
-                                );
+                                let _ =
+                                    outgoing_tx.send(
+                                        server_error(
+                                            "Invalid message"
+                                        )
+                                    );
                             }
                         }
                     }
 
                     Some(Ok(Message::Close(_))) => {
-                        info!("WebSocket client disconnected");
                         break;
                     }
 
                     Some(Ok(_)) => {}
 
                     Some(Err(error)) => {
-                        warn!("WebSocket error: {}", error);
+                        warn!(
+                            "WebSocket error: {}",
+                            error
+                        );
+
                         break;
                     }
 
-                    None => break,
+                    None => {
+                        break;
+                    }
                 }
             }
 
             outgoing = outgoing_rx.recv() => {
-                let Some(message) = outgoing else {
+                let Some(message) =
+                    outgoing
+                else {
                     break;
                 };
 
                 let json =
-                    match serde_json::to_string(&message) {
+                    match serde_json::to_string(
+                        &message
+                    ) {
                         Ok(json) => json,
 
                         Err(error) => {
@@ -505,7 +652,11 @@ async fn handle_socket(mut socket: WebSocket, state: AppState) {
                     };
 
                 if socket
-                    .send(Message::Text(json.into()))
+                    .send(
+                        Message::Text(
+                            json.into()
+                        )
+                    )
                     .await
                     .is_err()
                 {
@@ -519,36 +670,38 @@ async fn handle_socket(mut socket: WebSocket, state: AppState) {
         remove_player(&state, &room_code, player_id).await;
     }
 
-    info!("WebSocket connection closed");
+    info!("WebSocket client disconnected");
 }
 
 async fn create_room(
     state: &AppState,
     sender: ClientSender,
     player_name: String,
+    room_name: String,
     max_players: u8,
     visibility: String,
 ) -> Result<(String, Uuid, ServerMessage), ServerMessage> {
     let player_name = validate_player_name(player_name)?;
 
+    let room_name = validate_room_name(room_name)?;
+
     if !(1..=4).contains(&max_players) {
-        return Err(ServerMessage::Error {
-            message: "Max players must be between 1 and 4".to_string(),
-        });
+        return Err(server_error("Max players must be between 1 and 4"));
     }
 
-    let room_visibility = match visibility.as_str() {
-        "private" => RoomVisibility::Private,
+    let visibility = match visibility.as_str() {
         "public" => RoomVisibility::Public,
 
+        "private" => RoomVisibility::Private,
+
         _ => {
-            return Err(ServerMessage::Error {
-                message: "Visibility must be public or private".to_string(),
-            });
+            return Err(server_error("Invalid room visibility"));
         }
     };
 
     let player_id = Uuid::new_v4();
+
+    let room_id = Uuid::new_v4();
 
     let player = Player {
         id: player_id,
@@ -570,20 +723,36 @@ async fn create_room(
     };
 
     let room = Room {
+        id: room_id,
+
+        name: room_name.clone(),
+
         host_id: player_id,
+
         max_players,
-        visibility: room_visibility,
+
+        visibility,
+
         players: vec![player],
+
         state: RoomState::Lobby,
     };
 
     let response = ServerMessage::RoomCreated {
         room_code: room_code.clone(),
+
+        room_name,
+
         player_id,
+
         host_id: player_id,
+
         max_players,
-        visibility: room_visibility.as_str().to_string(),
-        state: room.state.as_str().to_string(),
+
+        visibility: visibility.as_str().to_string(),
+
+        state: RoomState::Lobby.as_str().to_string(),
+
         players: room_players_response(&room),
     };
 
@@ -594,7 +763,54 @@ async fn create_room(
     Ok((room_code, player_id, response))
 }
 
-async fn join_room(
+async fn join_room_by_code(
+    state: &AppState,
+    sender: ClientSender,
+    player_name: String,
+    room_code: String,
+) -> Result<(String, Uuid, ServerMessage), ServerMessage> {
+    let room_code = room_code.trim().to_uppercase();
+
+    join_room_internal(state, sender, player_name, room_code).await
+}
+
+async fn join_public_room(
+    state: &AppState,
+    sender: ClientSender,
+    player_name: String,
+    room_id: Uuid,
+) -> Result<(String, Uuid, ServerMessage), ServerMessage> {
+    let room_code = {
+        let rooms = state.rooms.read().await;
+
+        rooms
+            .iter()
+            .find_map(|(room_code, room)| {
+                if room.id == room_id {
+                    Some(room_code.clone())
+                } else {
+                    None
+                }
+            })
+            .ok_or_else(|| server_error("Room not found"))?
+    };
+
+    {
+        let rooms = state.rooms.read().await;
+
+        let room = rooms
+            .get(&room_code)
+            .ok_or_else(|| server_error("Room not found"))?;
+
+        if !matches!(room.visibility, RoomVisibility::Public) {
+            return Err(server_error("This room requires a code"));
+        }
+    }
+
+    join_room_internal(state, sender, player_name, room_code).await
+}
+
+async fn join_room_internal(
     state: &AppState,
     sender: ClientSender,
     player_name: String,
@@ -602,32 +818,22 @@ async fn join_room(
 ) -> Result<(String, Uuid, ServerMessage), ServerMessage> {
     let player_name = validate_player_name(player_name)?;
 
-    let room_code = room_code.trim().to_uppercase();
-
     if room_code.len() != ROOM_CODE_LENGTH {
-        return Err(ServerMessage::Error {
-            message: "Invalid room code".to_string(),
-        });
+        return Err(server_error("Invalid room code"));
     }
 
     let mut rooms = state.rooms.write().await;
 
     let room = rooms
         .get_mut(&room_code)
-        .ok_or_else(|| ServerMessage::Error {
-            message: "Room not found".to_string(),
-        })?;
+        .ok_or_else(|| server_error("Room not found"))?;
 
     if !matches!(room.state, RoomState::Lobby) {
-        return Err(ServerMessage::Error {
-            message: "This game has already started".to_string(),
-        });
+        return Err(server_error("This game has already started"));
     }
 
     if room.players.len() >= usize::from(room.max_players) {
-        return Err(ServerMessage::Error {
-            message: "Room is full".to_string(),
-        });
+        return Err(server_error("Room is full"));
     }
 
     if room
@@ -635,35 +841,109 @@ async fn join_room(
         .iter()
         .any(|player| player.name.eq_ignore_ascii_case(&player_name))
     {
-        return Err(ServerMessage::Error {
-            message: "That player name is already being used in this room".to_string(),
-        });
+        return Err(server_error(
+            "That nickname is already being used in this room",
+        ));
     }
 
     let player_id = Uuid::new_v4();
 
     room.players.push(Player {
         id: player_id,
+
         name: player_name,
+
         is_host: false,
+
         ready: false,
+
         turn_rolls: [None, None, None],
+
         sender,
     });
 
     let response = ServerMessage::RoomJoined {
         room_code: room_code.clone(),
+
+        room_name: room.name.clone(),
+
         player_id,
+
         host_id: room.host_id,
+
         max_players: room.max_players,
+
         visibility: room.visibility.as_str().to_string(),
+
         state: room.state.as_str().to_string(),
+
         players: room_players_response(room),
     };
 
-    info!("Player {} joined room {}", player_id, room_code);
-
     Ok((room_code, player_id, response))
+}
+
+async fn list_rooms(state: &AppState, requested_page: usize, search: String) -> ServerMessage {
+    let rooms = state.rooms.read().await;
+
+    let search = search.trim().to_lowercase();
+
+    let mut summaries = rooms
+        .values()
+        .filter(|room| matches!(room.state, RoomState::Lobby))
+        .filter(|room| search.is_empty() || room.name.to_lowercase().contains(&search))
+        .map(|room| {
+            let host_name = room
+                .players
+                .iter()
+                .find(|player| player.id == room.host_id)
+                .map(|player| player.name.clone())
+                .unwrap_or_else(|| "Unknown".to_string());
+
+            RoomSummary {
+                room_id: room.id,
+
+                room_name: room.name.clone(),
+
+                host_name,
+
+                visibility: room.visibility.as_str().to_string(),
+
+                player_count: room.players.len(),
+
+                max_players: room.max_players,
+
+                joinable: room.players.len() < usize::from(room.max_players),
+            }
+        })
+        .collect::<Vec<_>>();
+
+    summaries.sort_by(|a, b| a.room_name.to_lowercase().cmp(&b.room_name.to_lowercase()));
+
+    let total_rooms = summaries.len();
+
+    let total_pages = if total_rooms == 0 {
+        1
+    } else {
+        (total_rooms + ROOMS_PER_PAGE - 1) / ROOMS_PER_PAGE
+    };
+
+    let page = requested_page.max(1).min(total_pages);
+
+    let start = (page - 1) * ROOMS_PER_PAGE;
+
+    let rooms = summaries
+        .into_iter()
+        .skip(start)
+        .take(ROOMS_PER_PAGE)
+        .collect::<Vec<_>>();
+
+    ServerMessage::RoomDirectory {
+        rooms,
+        page,
+        total_pages,
+        total_rooms,
+    }
 }
 
 async fn set_player_ready(
@@ -677,23 +957,19 @@ async fn set_player_ready(
 
         let room = rooms
             .get_mut(room_code)
-            .ok_or_else(|| ServerMessage::Error {
-                message: "Room not found".to_string(),
-            })?;
+            .ok_or_else(|| server_error("Room not found"))?;
 
         if !matches!(room.state, RoomState::Lobby) {
-            return Err(ServerMessage::Error {
-                message: "Ready state cannot be changed after the game starts".to_string(),
-            });
+            return Err(server_error(
+                "Ready state cannot be changed after the game starts",
+            ));
         }
 
         let player = room
             .players
             .iter_mut()
             .find(|player| player.id == player_id)
-            .ok_or_else(|| ServerMessage::Error {
-                message: "Player not found".to_string(),
-            })?;
+            .ok_or_else(|| server_error("Player not found"))?;
 
         player.ready = ready;
     }
@@ -713,32 +989,22 @@ async fn start_game(
 
         let room = rooms
             .get_mut(room_code)
-            .ok_or_else(|| ServerMessage::Error {
-                message: "Room not found".to_string(),
-            })?;
+            .ok_or_else(|| server_error("Room not found"))?;
 
         if room.host_id != player_id {
-            return Err(ServerMessage::Error {
-                message: "Only the host can start the game".to_string(),
-            });
+            return Err(server_error("Only the host can start the game"));
         }
 
         if !matches!(room.state, RoomState::Lobby) {
-            return Err(ServerMessage::Error {
-                message: "The game has already started".to_string(),
-            });
+            return Err(server_error("The game has already started"));
         }
 
         if room.players.len() < 2 {
-            return Err(ServerMessage::Error {
-                message: "At least 2 players are required".to_string(),
-            });
+            return Err(server_error("At least 2 players are required"));
         }
 
         if !room.players.iter().all(|player| player.ready) {
-            return Err(ServerMessage::Error {
-                message: "All players must be ready".to_string(),
-            });
+            return Err(server_error("All players must be ready"));
         }
 
         room.state = RoomState::TurnOrder;
@@ -760,6 +1026,7 @@ async fn start_game(
 
     let message = ServerMessage::TurnOrderStarted {
         room_code: room_code.to_string(),
+
         players,
     };
 
@@ -767,7 +1034,7 @@ async fn start_game(
         let _ = sender.send(message.clone());
     }
 
-    info!("Turn-order phase started in room {}", room_code);
+    info!("Game started in room {}", room_code);
 
     Ok(())
 }
@@ -779,9 +1046,7 @@ async fn roll_turn_die(
     die_index: usize,
 ) -> Result<(), ServerMessage> {
     if die_index >= TURN_ORDER_DICE {
-        return Err(ServerMessage::Error {
-            message: "Invalid die index".to_string(),
-        });
+        return Err(server_error("Invalid die index"));
     }
 
     {
@@ -789,35 +1054,23 @@ async fn roll_turn_die(
 
         let room = rooms
             .get_mut(room_code)
-            .ok_or_else(|| ServerMessage::Error {
-                message: "Room not found".to_string(),
-            })?;
+            .ok_or_else(|| server_error("Room not found"))?;
 
         if !matches!(room.state, RoomState::TurnOrder) {
-            return Err(ServerMessage::Error {
-                message: "Turn-order phase is not active".to_string(),
-            });
+            return Err(server_error("Turn-order phase is not active"));
         }
 
         let player = room
             .players
             .iter_mut()
             .find(|player| player.id == player_id)
-            .ok_or_else(|| ServerMessage::Error {
-                message: "Player not found".to_string(),
-            })?;
+            .ok_or_else(|| server_error("Player not found"))?;
 
         if player.turn_rolls[die_index].is_some() {
-            return Err(ServerMessage::Error {
-                message: "This die has already been rolled".to_string(),
-            });
+            return Err(server_error("This die has already been rolled"));
         }
 
-        let value: u8 = rand::random_range(1..=6);
-
-        player.turn_rolls[die_index] = Some(value);
-
-        info!("Player {} rolled die {} = {}", player_id, die_index, value);
+        player.turn_rolls[die_index] = Some(rand::random_range(1..=6));
     }
 
     broadcast_turn_order_state(state, room_code).await;
@@ -909,9 +1162,13 @@ async fn finish_turn_order_if_ready(state: &AppState, room_code: &str) {
 
             ranking.push(TurnOrderRankingEntry {
                 player_id: *player_id,
+
                 name: name.clone(),
+
                 total: *total,
+
                 position,
+
                 tied,
             });
         }
@@ -930,8 +1187,6 @@ async fn finish_turn_order_if_ready(state: &AppState, room_code: &str) {
     for sender in senders {
         let _ = sender.send(message.clone());
     }
-
-    info!("Turn-order phase finished in room {}", room_code);
 }
 
 async fn broadcast_room_state(state: &AppState, room_code: &str) {
@@ -950,10 +1205,17 @@ async fn broadcast_room_state(state: &AppState, room_code: &str) {
 
         let message = ServerMessage::RoomState {
             room_code: room_code.to_string(),
+
+            room_name: room.name.clone(),
+
             host_id: room.host_id,
+
             max_players: room.max_players,
+
             visibility: room.visibility.as_str().to_string(),
+
             state: room.state.as_str().to_string(),
+
             players: room_players_response(room),
         };
 
@@ -967,7 +1229,8 @@ async fn broadcast_room_state(state: &AppState, room_code: &str) {
 
 async fn remove_player(state: &AppState, room_code: &str, player_id: Uuid) {
     let mut delete_room = false;
-    let mut should_check_turn_order = false;
+
+    let mut check_turn_order = false;
 
     {
         let mut rooms = state.rooms.write().await;
@@ -984,21 +1247,16 @@ async fn remove_player(state: &AppState, room_code: &str, player_id: Uuid) {
             delete_room = true;
         } else {
             if was_host {
-                let new_host_id = room.players[0].id;
+                let new_host = room.players[0].id;
 
-                room.host_id = new_host_id;
+                room.host_id = new_host;
 
                 for player in &mut room.players {
-                    player.is_host = player.id == new_host_id;
+                    player.is_host = player.id == new_host;
                 }
-
-                info!(
-                    "Host migrated in room {} to player {}",
-                    room_code, new_host_id
-                );
             }
 
-            should_check_turn_order = matches!(room.state, RoomState::TurnOrder);
+            check_turn_order = matches!(room.state, RoomState::TurnOrder);
         }
     }
 
@@ -1007,12 +1265,10 @@ async fn remove_player(state: &AppState, room_code: &str, player_id: Uuid) {
 
         rooms.remove(room_code);
 
-        info!("Room {} removed because it is empty", room_code);
-
         return;
     }
 
-    if should_check_turn_order {
+    if check_turn_order {
         broadcast_turn_order_state(state, room_code).await;
 
         finish_turn_order_if_ready(state, room_code).await;
@@ -1025,18 +1281,30 @@ fn validate_player_name(player_name: String) -> Result<String, ServerMessage> {
     let player_name = player_name.trim().to_string();
 
     if player_name.is_empty() {
-        return Err(ServerMessage::Error {
-            message: "Player name cannot be empty".to_string(),
-        });
+        return Err(server_error("Nickname is required"));
     }
 
     if player_name.chars().count() > 24 {
-        return Err(ServerMessage::Error {
-            message: "Player name is too long".to_string(),
-        });
+        return Err(server_error("Nickname cannot exceed 24 characters"));
     }
 
     Ok(player_name)
+}
+
+fn validate_room_name(room_name: String) -> Result<String, ServerMessage> {
+    let room_name = room_name.trim().to_string();
+
+    let length = room_name.chars().count();
+
+    if length < 3 {
+        return Err(server_error("Room name must contain at least 3 characters"));
+    }
+
+    if length > 32 {
+        return Err(server_error("Room name cannot exceed 32 characters"));
+    }
+
+    Ok(room_name)
 }
 
 fn room_players_response(room: &Room) -> Vec<PlayerResponse> {
@@ -1044,8 +1312,11 @@ fn room_players_response(room: &Room) -> Vec<PlayerResponse> {
         .iter()
         .map(|player| PlayerResponse {
             id: player.id,
+
             name: player.name.clone(),
+
             is_host: player.is_host,
+
             ready: player.ready,
         })
         .collect()
@@ -1056,9 +1327,13 @@ fn turn_order_players_response(room: &Room) -> Vec<TurnOrderPlayerResponse> {
         .iter()
         .map(|player| TurnOrderPlayerResponse {
             id: player.id,
+
             name: player.name.clone(),
+
             rolls: player.turn_rolls.to_vec(),
+
             total: turn_roll_total(player),
+
             complete: player.turn_rolls.iter().all(Option::is_some),
         })
         .collect()
@@ -1074,11 +1349,25 @@ fn turn_roll_total(player: &Player) -> u16 {
 }
 
 fn generate_room_code() -> String {
-    (0..ROOM_CODE_LENGTH)
-        .map(|_| {
-            let index = rand::random_range(0..ROOM_CODE_CHARS.len());
+    let mut code = String::with_capacity(ROOM_CODE_LENGTH);
 
-            ROOM_CODE_CHARS[index] as char
-        })
-        .collect()
+    for index in 0..ROOM_CODE_LENGTH {
+        if index % 2 == 0 {
+            let letter_index = rand::random_range(0..ROOM_CODE_LETTERS.len());
+
+            code.push(ROOM_CODE_LETTERS[letter_index] as char);
+        } else {
+            let digit_index = rand::random_range(0..ROOM_CODE_DIGITS.len());
+
+            code.push(ROOM_CODE_DIGITS[digit_index] as char);
+        }
+    }
+
+    code
+}
+
+fn server_error(message: &str) -> ServerMessage {
+    ServerMessage::Error {
+        message: message.to_string(),
+    }
 }

@@ -1,0 +1,86 @@
+---
+import BaseLayout
+  from '../layouts/BaseLayout.astro';
+
+import RoomLobby
+  from '../components/lobby/RoomLobby.svelte';
+---
+
+<BaseLayout
+  title="Play — Kivo Play"
+  description="Create or join a multiplayer room in Kivo Play."
+>
+  <main class="play-page">
+    <div class="play-heading">
+      <span>
+        KIVO PLAY · ALPHA
+      </span>
+
+      <h1>
+        Multiplayer
+      </h1>
+
+      <p>
+        Create a room, invite your
+        friends and play together.
+      </p>
+    </div>
+
+    <RoomLobby client:load />
+  </main>
+</BaseLayout>
+
+<style>
+  .play-page {
+    width:
+      min(
+        1100px,
+        calc(100% - 2rem)
+      );
+
+    min-height:
+      calc(100vh - 180px);
+
+    margin: 0 auto;
+
+    padding:
+      5rem 0 7rem;
+  }
+
+  .play-heading {
+    margin-bottom: 2rem;
+
+    text-align: center;
+  }
+
+  .play-heading > span {
+    color: #c084fc;
+
+    font-size: 0.7rem;
+    font-weight: 900;
+
+    letter-spacing: 0.16em;
+  }
+
+  .play-heading h1 {
+    margin:
+      0.5rem 0;
+
+    font-size:
+      clamp(
+        2.5rem,
+        6vw,
+        4rem
+      );
+
+    letter-spacing:
+      -0.045em;
+  }
+
+  .play-heading p {
+    margin: 0;
+
+    color:
+      rgba(255, 255, 255, 0.5);
+  }
+</style>

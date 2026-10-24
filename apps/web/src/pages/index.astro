@@ -1,0 +1,108 @@
+---
+import RoomTest from '../components/RoomTest.svelte';
+
+let backendStatus = 'offline';
+
+try {
+  const response = await fetch('http://127.0.0.1:3000/health');
+
+  const data = await response.json();
+
+  backendStatus = data.status;
+} catch {
+  backendStatus = 'offline';
+}
+---
+
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+
+    <meta
+      name="viewport"
+      content="width=device-width"
+    />
+
+    <title>Kivo Play Alpha</title>
+  </head>
+
+  <body>
+    <main>
+      <header>
+        <h1>Kivo Play</h1>
+
+        <span>ALPHA</span>
+      </header>
+
+      <p>
+        Frontend: online · Backend: {backendStatus}
+      </p>
+
+      <RoomTest client:load />
+    </main>
+  </body>
+</html>
+
+<style>
+  :global(*) {
+    box-sizing: border-box;
+  }
+
+  :global(body) {
+    margin: 0;
+    min-height: 100vh;
+
+    color: #f8fafc;
+
+    background:
+      radial-gradient(
+        circle at 20% 10%,
+        rgba(124, 58, 237, 0.22),
+        transparent 35%
+      ),
+      radial-gradient(
+        circle at 90% 80%,
+        rgba(59, 130, 246, 0.16),
+        transparent 35%
+      ),
+      #09090b;
+
+    font-family:
+      Inter,
+      system-ui,
+      sans-serif;
+  }
+
+  main {
+    width: min(1100px, calc(100% - 2rem));
+    margin: 0 auto;
+    padding: 2rem 0 5rem;
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+  }
+
+  h1 {
+    margin: 0;
+  }
+
+  header span {
+    padding: 0.3rem 0.55rem;
+
+    border-radius: 999px;
+
+    background: rgba(168, 85, 247, 0.15);
+
+    color: #d8b4fe;
+
+    font-size: 0.7rem;
+    font-weight: 800;
+  }
+
+  p {
+    opacity: 0.7;
+  }
+</style>

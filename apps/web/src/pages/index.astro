@@ -1,32 +1,64 @@
 ---
 import BaseLayout
   from '../layouts/BaseLayout.astro';
+
+const featuredGames = [
+  {
+    name: 'Flux',
+    category: 'Cards',
+    players: '1–4',
+    className: 'flux',
+    status: 'Planned'
+  },
+  {
+    name: 'SudoRush',
+    category: 'Puzzle',
+    players: '1–4',
+    className: 'sudorush',
+    status: 'Planned'
+  },
+  {
+    name: 'Stackfall',
+    category: 'Arcade',
+    players: '1–4',
+    className: 'stackfall',
+    status: 'Planned'
+  },
+  {
+    name: 'Diceforge',
+    category: 'Strategy',
+    players: '1–4',
+    className: 'diceforge',
+    status: 'Planned'
+  }
+];
 ---
 
 <BaseLayout
   title="Kivo Play — Play fast. Play together."
-  description="Kivo Play is an open-source multiplayer mini-game platform powered by Astro, Svelte and Rust."
+  description="Kivo Play is an open-source multiplayer mini-game platform powered by Astro and Rust."
 >
   <main>
     <section class="hero container">
       <div class="hero-copy">
-        <span class="hero-label">
-          OPEN-SOURCE · ALPHA
-        </span>
+        <div class="hero-kicker">
+          <span class="live-dot"></span>
+
+          OPEN-SOURCE MULTIPLAYER ALPHA
+        </div>
 
         <h1>
-          Play fast.
-          <br />
+          Games made
           <span>
-            Play together.
+            to play together.
           </span>
         </h1>
 
-        <p>
-          A multiplayer mini-game
-          platform built for quick
-          matches, friends, competition
-          and experimentation.
+        <p class="hero-description">
+          Fast rooms, quick matches
+          and original mini-games built
+          for friends, competition and
+          chaotic game nights.
         </p>
 
         <div class="hero-actions">
@@ -34,52 +66,105 @@ import BaseLayout
             class="button-primary"
             href="/play"
           >
-            Start Playing
+            <span>
+              ▶
+            </span>
+
+            Play now
           </a>
 
           <a
             class="button-secondary"
             href="/games"
           >
-            Explore Games
+            Explore games
           </a>
         </div>
 
-        <div class="tech-row">
-          <span>
-            Astro
-          </span>
+        <div class="hero-stats">
+          <div>
+            <strong>
+              1–4
+            </strong>
 
-          <span>
-            Svelte
-          </span>
+            <span>
+              players
+            </span>
+          </div>
 
-          <span>
-            TypeScript
-          </span>
+          <div>
+            <strong>
+              Real-time
+            </strong>
 
-          <span>
-            Rust
-          </span>
+            <span>
+              multiplayer
+            </span>
+          </div>
 
-          <span>
-            Axum
-          </span>
+          <div>
+            <strong>
+              Rust
+            </strong>
 
-          <span>
-            WebSockets
-          </span>
+            <span>
+              server authority
+            </span>
+          </div>
         </div>
       </div>
 
-      <div class="hero-visual">
-        <div class="visual-card visual-card-back">
+      <div class="hero-art">
+        <div class="hero-glow"></div>
+
+        <div class="floating-card card-red">
+          <span class="card-symbol">
+            ↯
+          </span>
+
+          <strong>
+            FLUX
+          </strong>
         </div>
 
-        <div class="visual-card visual-card-main">
-          <div class="visual-top">
+        <div class="floating-card card-blue">
+          <span>
+            8
+          </span>
+
+          <span>
+            4
+          </span>
+
+          <span>
+            2
+          </span>
+
+          <strong>
+            SUDORUSH
+          </strong>
+        </div>
+
+        <div class="floating-die">
+          <span>●</span>
+          <span>●</span>
+          <span>●</span>
+          <span>●</span>
+          <span>●</span>
+        </div>
+
+        <div class="block-stack">
+          <span></span>
+          <span></span>
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+
+        <div class="hero-console">
+          <div class="console-top">
             <span>
-              PRIVATE ROOM
+              KIVO PLAY
             </span>
 
             <strong>
@@ -87,103 +172,336 @@ import BaseLayout
             </strong>
           </div>
 
-          <h2>
-            Lobby
-          </h2>
+          <div class="console-room">
+            <small>
+              PRIVATE ROOM
+            </small>
 
-          <div class="fake-code">
-            K7MF2Q
+            <h2>
+              Friday Night
+            </h2>
+
+            <div class="console-code">
+              A2B3C4
+            </div>
           </div>
 
-          <div class="fake-player active">
+          <div class="console-players">
             <div>
-              A
+              <span class="avatar amber">
+                A
+              </span>
+
+              <div>
+                <strong>
+                  Alex
+                </strong>
+
+                <small>
+                  Host
+                </small>
+              </div>
+
+              <b>
+                READY
+              </b>
             </div>
 
-            <span>
-              Alejandro
-              <small>
-                You · Host
-              </small>
-            </span>
-
-            <strong>
-              READY
-            </strong>
-          </div>
-
-          <div class="fake-player">
             <div>
-              N
+              <span class="avatar cyan">
+                N
+              </span>
+
+              <div>
+                <strong>
+                  Nova
+                </strong>
+
+                <small>
+                  Player
+                </small>
+              </div>
+
+              <b>
+                READY
+              </b>
             </div>
-
-            <span>
-              Nova
-              <small>
-                Player
-              </small>
-            </span>
-
-            <strong>
-              READY
-            </strong>
           </div>
 
-          <div class="fake-start">
+          <div class="console-start">
             Start Game
           </div>
         </div>
       </div>
     </section>
 
-    <section class="features container">
-      <article>
+    <section class="featured-section container">
+      <header class="section-heading">
+        <div>
+          <span>
+            FEATURED GAMES
+          </span>
+
+          <h2>
+            Pick your chaos.
+          </h2>
+        </div>
+
+        <a href="/games">
+          View all games →
+        </a>
+      </header>
+
+      <div class="featured-grid">
+        {
+          featuredGames.map(
+            (game) => (
+              <a
+                class:list={[
+                  'featured-card',
+                  game.className
+                ]}
+                href="/games"
+              >
+                <div class="game-art">
+                  {
+                    game.name ===
+                      'Flux' && (
+                      <>
+                        <div class="mini-card one">
+                          ↯
+                        </div>
+
+                        <div class="mini-card two">
+                          ↺
+                        </div>
+
+                        <div class="mini-card three">
+                          ✦
+                        </div>
+                      </>
+                    )
+                  }
+
+                  {
+                    game.name ===
+                      'SudoRush' && (
+                      <div class="sudoku-board">
+                        {
+                          [
+                            4,
+                            8,
+                            2,
+                            7,
+                            1,
+                            3,
+                            6,
+                            5,
+                            9
+                          ].map(
+                            (
+                              number
+                            ) => (
+                              <span>
+                                {number}
+                              </span>
+                            )
+                          )
+                        }
+                      </div>
+                    )
+                  }
+
+                  {
+                    game.name ===
+                      'Stackfall' && (
+                      <div class="stack-art">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                      </div>
+                    )
+                  }
+
+                  {
+                    game.name ===
+                      'Diceforge' && (
+                      <div class="dice-art">
+                        <div class="dice-a">
+                          ⚄
+                        </div>
+
+                        <div class="dice-b">
+                          ⚂
+                        </div>
+                      </div>
+                    )
+                  }
+                </div>
+
+                <div class="game-copy">
+                  <div>
+                    <span>
+                      {game.category}
+                    </span>
+
+                    <small>
+                      {game.status}
+                    </small>
+                  </div>
+
+                  <h3>
+                    {game.name}
+                  </h3>
+
+                  <p>
+                    {game.players}
+                    {' '}
+                    players
+                  </p>
+                </div>
+              </a>
+            )
+          )
+        }
+      </div>
+    </section>
+
+    <section class="how-it-works container">
+      <div class="how-copy">
         <span>
-          01
+          MULTIPLAYER WITHOUT THE FRICTION
         </span>
 
         <h2>
-          Fast rooms
+          From link to game in seconds.
         </h2>
 
         <p>
-          Create a room, share a
-          six-character code and start
-          playing.
+          Kivo Play is being designed
+          around short sessions. No
+          accounts required for the
+          current Alpha: choose a
+          nickname, create a room and
+          invite your friends.
         </p>
-      </article>
+      </div>
 
-      <article>
+      <div class="steps">
+        <article>
+          <div class="step-number">
+            01
+          </div>
+
+          <span class="step-icon warm">
+            ✦
+          </span>
+
+          <h3>
+            Create
+          </h3>
+
+          <p>
+            Give your room a name and
+            choose whether it is public
+            or private.
+          </p>
+        </article>
+
+        <article>
+          <div class="step-number">
+            02
+          </div>
+
+          <span class="step-icon cyan">
+            ↗
+          </span>
+
+          <h3>
+            Invite
+          </h3>
+
+          <p>
+            Share the room code or let
+            friends discover your public
+            room.
+          </p>
+        </article>
+
+        <article>
+          <div class="step-number">
+            03
+          </div>
+
+          <span class="step-icon green">
+            ✓
+          </span>
+
+          <h3>
+            Ready
+          </h3>
+
+          <p>
+            Everyone marks themselves
+            ready before the host starts
+            the match.
+          </p>
+        </article>
+
+        <article>
+          <div class="step-number">
+            04
+          </div>
+
+          <span class="step-icon coral">
+            ▶
+          </span>
+
+          <h3>
+            Play
+          </h3>
+
+          <p>
+            Game state is synchronized
+            through the Rust multiplayer
+            server.
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <section class="cta container">
+      <div class="cta-decoration">
+        <div class="cta-die">
+          ⚅
+        </div>
+
+        <div class="cta-card">
+          ✦
+        </div>
+      </div>
+
+      <div>
         <span>
-          02
+          READY?
         </span>
 
         <h2>
-          Real-time
+          Start a room.
+          <br />
+          Bring your friends.
         </h2>
+      </div>
 
-        <p>
-          Multiplayer state is
-          synchronized through a Rust
-          WebSocket server.
-        </p>
-      </article>
-
-      <article>
-        <span>
-          03
-        </span>
-
-        <h2>
-          Server authority
-        </h2>
-
-        <p>
-          Important game results are
-          validated and generated by the
-          backend.
-        </p>
-      </article>
+      <a
+        class="button-primary"
+        href="/play"
+      >
+        Play Kivo
+      </a>
     </section>
   </main>
 </BaseLayout>
@@ -191,77 +509,146 @@ import BaseLayout
 <style>
   .hero {
     min-height:
-      calc(100vh - 90px);
+      calc(100vh - 84px);
 
     display: grid;
 
     grid-template-columns:
-      minmax(0, 1.1fr)
-      minmax(340px, 0.9fr);
+      minmax(0, 1fr)
+      minmax(440px, 0.85fr);
 
     align-items: center;
 
-    gap: 5rem;
+    gap: 4rem;
 
-    padding-top: 5rem;
+    padding-top: 4.5rem;
     padding-bottom: 6rem;
   }
 
-  .hero-label {
+  .hero-kicker {
     display: inline-flex;
 
+    align-items: center;
+
+    gap: 0.5rem;
+
     padding:
-      0.45rem 0.75rem;
+      0.45rem 0.7rem;
 
     border:
       1px solid
-      rgba(192, 132, 252, 0.2);
+      rgba(
+        251,
+        191,
+        36,
+        0.18
+      );
 
-    border-radius: 999px;
+    border-radius:
+      999px;
 
-    color: #d8b4fe;
+    color:
+      #fde68a;
 
     background:
-      rgba(168, 85, 247, 0.08);
+      rgba(
+        245,
+        158,
+        11,
+        0.065
+      );
 
-    font-size: 0.7rem;
-    font-weight: 900;
+    font-size:
+      0.65rem;
 
-    letter-spacing: 0.15em;
+    font-weight:
+      900;
+
+    letter-spacing:
+      0.12em;
+  }
+
+  .live-dot {
+    width: 7px;
+    height: 7px;
+
+    border-radius:
+      50%;
+
+    background:
+      #34d399;
+
+    box-shadow:
+      0 0 14px
+      rgba(
+        52,
+        211,
+        153,
+        0.7
+      );
   }
 
   .hero h1 {
+    max-width:
+      760px;
+
     margin:
-      1.5rem 0;
+      1.6rem 0;
 
     font-size:
       clamp(
-        4rem,
+        4.5rem,
         8vw,
-        7rem
+        7.6rem
       );
 
-    line-height: 0.92;
+    line-height:
+      0.9;
 
     letter-spacing:
-      -0.065em;
+      -0.07em;
   }
 
   .hero h1 span {
-    color: #c084fc;
+    display: block;
+
+    color:
+      transparent;
+
+    background:
+      linear-gradient(
+        90deg,
+        #fbbf24,
+        #fb923c,
+        #fb7185
+      );
+
+    background-clip:
+      text;
+
+    -webkit-background-clip:
+      text;
   }
 
-  .hero-copy > p {
-    max-width: 620px;
+  .hero-description {
+    max-width:
+      630px;
 
     margin: 0;
 
     color:
-      rgba(255, 255, 255, 0.58);
+      rgba(
+        255,
+        255,
+        255,
+        0.55
+      );
 
-    font-size: 1.1rem;
+    font-size:
+      1.1rem;
 
-    line-height: 1.7;
+    line-height:
+      1.75;
   }
 
   .hero-actions {
@@ -271,267 +658,1470 @@ import BaseLayout
 
     gap: 0.8rem;
 
-    margin-top: 2rem;
+    margin-top:
+      2rem;
   }
 
-  .tech-row {
+  .hero-actions
+    .button-primary {
+    display: inline-flex;
+
+    gap: 0.5rem;
+  }
+
+  .hero-stats {
     display: flex;
 
     flex-wrap: wrap;
 
-    gap: 0.55rem;
+    gap: 2.4rem;
 
-    margin-top: 2.5rem;
+    margin-top:
+      3rem;
   }
 
-  .tech-row span {
-    padding:
-      0.4rem 0.65rem;
+  .hero-stats div {
+    display: grid;
 
-    border:
-      1px solid
-      rgba(255, 255, 255, 0.07);
+    gap: 0.15rem;
+  }
 
-    border-radius: 999px;
-
+  .hero-stats strong {
     color:
-      rgba(255, 255, 255, 0.45);
+      #fff7ed;
 
-    background:
-      rgba(255, 255, 255, 0.025);
-
-    font-size: 0.68rem;
-    font-weight: 700;
+    font-size:
+      0.95rem;
   }
 
-  .hero-visual {
+  .hero-stats span {
+    color:
+      rgba(
+        255,
+        255,
+        255,
+        0.35
+      );
+
+    font-size:
+      0.68rem;
+  }
+
+  .hero-art {
     position: relative;
 
-    min-height: 540px;
+    min-height:
+      590px;
   }
 
-  .visual-card {
+  .hero-glow {
     position: absolute;
+
+    width: 470px;
+    height: 470px;
+
+    top: 80px;
+    left: 40px;
+
+    border-radius:
+      50%;
+
+    background:
+      radial-gradient(
+        circle,
+        rgba(
+          251,
+          146,
+          60,
+          0.13
+        ),
+        rgba(
+          45,
+          212,
+          191,
+          0.04
+        ) 45%,
+        transparent 72%
+      );
+
+    filter:
+      blur(10px);
+  }
+
+  .hero-console {
+    position: absolute;
+
+    width: 385px;
+
+    top: 75px;
+    right: 15px;
+
+    padding:
+      1.5rem;
 
     border:
       1px solid
-      rgba(255, 255, 255, 0.1);
-
-    border-radius: 28px;
-  }
-
-  .visual-card-back {
-    inset:
-      70px -20px 10px 60px;
-
-    transform:
-      rotate(7deg);
-
-    background:
-      linear-gradient(
-        145deg,
-        rgba(124, 58, 237, 0.16),
-        rgba(59, 130, 246, 0.04)
+      rgba(
+        255,
+        255,
+        255,
+        0.1
       );
-  }
 
-  .visual-card-main {
-    inset:
-      20px 30px 40px 0;
-
-    padding: 2rem;
+    border-radius:
+      27px;
 
     background:
       linear-gradient(
-        145deg,
-        rgba(255, 255, 255, 0.075),
-        rgba(255, 255, 255, 0.02)
+        155deg,
+        rgba(
+          255,
+          247,
+          237,
+          0.085
+        ),
+        rgba(
+          12,
+          16,
+          25,
+          0.88
+        )
       );
 
     box-shadow:
-      0 40px 100px
-      rgba(0, 0, 0, 0.35);
+      0 45px 120px
+      rgba(
+        0,
+        0,
+        0,
+        0.42
+      );
 
     backdrop-filter:
-      blur(20px);
+      blur(24px);
+
+    transform:
+      rotate(2deg);
   }
 
-  .visual-top {
+  .console-top {
     display: flex;
 
     justify-content:
       space-between;
 
     color:
-      rgba(255, 255, 255, 0.4);
+      rgba(
+        255,
+        255,
+        255,
+        0.35
+      );
 
-    font-size: 0.65rem;
-    font-weight: 900;
+    font-size:
+      0.58rem;
+
+    font-weight:
+      900;
   }
 
-  .visual-top strong {
-    color: #86efac;
+  .console-top strong {
+    color:
+      #6ee7b7;
   }
 
-  .visual-card h2 {
-    margin-top: 2rem;
-
-    font-size: 2rem;
+  .console-room {
+    margin-top:
+      1.7rem;
   }
 
-  .fake-code {
-    margin: 1rem 0 2rem;
+  .console-room small {
+    color:
+      #fbbf24;
 
-    padding: 1.2rem;
+    font-size:
+      0.58rem;
 
-    border-radius: 16px;
-
-    background:
-      rgba(255, 255, 255, 0.04);
-
-    text-align: center;
-
-    font-size: 2rem;
-    font-weight: 900;
-
-    letter-spacing: 0.18em;
+    font-weight:
+      900;
   }
 
-  .fake-player {
-    display: flex;
+  .console-room h2 {
+    margin:
+      0.35rem 0 1rem;
 
-    align-items: center;
+    font-size:
+      1.8rem;
+  }
 
-    gap: 0.8rem;
-
-    margin-bottom: 0.7rem;
-
-    padding: 0.85rem;
+  .console-code {
+    padding:
+      1rem;
 
     border:
       1px solid
-      rgba(255, 255, 255, 0.07);
-
-    border-radius: 14px;
-  }
-
-  .fake-player.active {
-    border-color:
-      rgba(74, 222, 128, 0.2);
-
-    background:
-      rgba(34, 197, 94, 0.04);
-  }
-
-  .fake-player > div {
-    width: 40px;
-    height: 40px;
-
-    display: grid;
-    place-items: center;
-
-    border-radius: 12px;
-
-    background:
-      linear-gradient(
-        135deg,
-        #7c3aed,
-        #4f46e5
+      rgba(
+        251,
+        191,
+        36,
+        0.12
       );
 
-    font-weight: 900;
+    border-radius:
+      14px;
+
+    color:
+      #fef3c7;
+
+    background:
+      rgba(
+        245,
+        158,
+        11,
+        0.045
+      );
+
+    text-align:
+      center;
+
+    font-size:
+      1.7rem;
+
+    font-weight:
+      950;
+
+    letter-spacing:
+      0.15em;
   }
 
-  .fake-player > span {
+  .console-players {
+    display: grid;
+
+    gap: 0.65rem;
+
+    margin-top:
+      1rem;
+  }
+
+  .console-players > div {
+    display: flex;
+
+    align-items:
+      center;
+
+    gap: 0.7rem;
+
+    padding:
+      0.75rem;
+
+    border:
+      1px solid
+      rgba(
+        255,
+        255,
+        255,
+        0.06
+      );
+
+    border-radius:
+      13px;
+
+    background:
+      rgba(
+        255,
+        255,
+        255,
+        0.025
+      );
+  }
+
+  .console-players
+    > div
+    > div {
     display: grid;
 
     flex: 1;
-
-    font-weight: 800;
   }
 
-  .fake-player small {
-    margin-top: 0.1rem;
-
-    opacity: 0.4;
-
-    font-size: 0.65rem;
+  .console-players small {
+    opacity:
+      0.4;
   }
 
-  .fake-player strong {
-    color: #86efac;
+  .console-players b {
+    color:
+      #6ee7b7;
 
-    font-size: 0.6rem;
+    font-size:
+      0.55rem;
   }
 
-  .fake-start {
-    margin-top: 1.2rem;
+  .avatar {
+    width: 38px;
+    height: 38px;
 
-    padding: 0.95rem;
+    display: grid;
 
-    border-radius: 14px;
+    place-items:
+      center;
 
-    color: white;
+    border-radius:
+      11px;
+
+    color:
+      #171717;
+
+    font-weight:
+      950;
+  }
+
+  .avatar.amber {
+    background:
+      linear-gradient(
+        135deg,
+        #fde68a,
+        #fb923c
+      );
+  }
+
+  .avatar.cyan {
+    background:
+      linear-gradient(
+        135deg,
+        #67e8f9,
+        #60a5fa
+      );
+  }
+
+  .console-start {
+    margin-top:
+      1rem;
+
+    padding:
+      0.85rem;
+
+    border-radius:
+      12px;
+
+    color:
+      #271306;
 
     background:
       linear-gradient(
         135deg,
-        #7c3aed,
-        #a855f7
+        #fbbf24,
+        #fb923c
       );
 
-    text-align: center;
+    text-align:
+      center;
 
-    font-weight: 900;
+    font-weight:
+      950;
   }
 
-  .features {
+  .floating-card {
+    position: absolute;
+
+    width: 120px;
+    height: 165px;
+
+    display: grid;
+
+    place-items:
+      center;
+
+    border:
+      1px solid
+      rgba(
+        255,
+        255,
+        255,
+        0.12
+      );
+
+    border-radius:
+      20px;
+
+    box-shadow:
+      0 25px 60px
+      rgba(
+        0,
+        0,
+        0,
+        0.25
+      );
+  }
+
+  .card-red {
+    top: 10px;
+    left: 15px;
+
+    color:
+      #ffe4e6;
+
+    background:
+      linear-gradient(
+        155deg,
+        #be123c,
+        #fb7185
+      );
+
+    transform:
+      rotate(-13deg);
+  }
+
+  .card-blue {
+    right: 5px;
+    bottom: 35px;
+
+    grid-template-columns:
+      repeat(3, 1fr);
+
+    color:
+      #e0f2fe;
+
+    background:
+      linear-gradient(
+        155deg,
+        #0369a1,
+        #22d3ee
+      );
+
+    transform:
+      rotate(9deg);
+  }
+
+  .card-blue strong {
+    grid-column:
+      1 / -1;
+
+    font-size:
+      0.55rem;
+
+    letter-spacing:
+      0.08em;
+  }
+
+  .card-symbol {
+    font-size:
+      3.4rem;
+  }
+
+  .card-red strong {
+    font-size:
+      0.6rem;
+
+    letter-spacing:
+      0.1em;
+  }
+
+  .floating-die {
+    position: absolute;
+
+    width: 105px;
+    height: 105px;
+
+    left: 10px;
+    bottom: 80px;
+
     display: grid;
 
     grid-template-columns:
       repeat(3, 1fr);
 
-    gap: 1rem;
+    grid-template-rows:
+      repeat(3, 1fr);
 
-    padding-bottom: 7rem;
+    place-items:
+      center;
+
+    padding:
+      1rem;
+
+    border-radius:
+      24px;
+
+    color:
+      #2a1605;
+
+    background:
+      linear-gradient(
+        135deg,
+        #fde68a,
+        #fb923c
+      );
+
+    box-shadow:
+      0 25px 60px
+      rgba(
+        249,
+        115,
+        22,
+        0.2
+      );
+
+    transform:
+      rotate(-10deg);
   }
 
-  .features article {
-    padding: 1.5rem;
+  .floating-die
+    span:nth-child(1) {
+    grid-area:
+      1 / 1;
+  }
+
+  .floating-die
+    span:nth-child(2) {
+    grid-area:
+      1 / 3;
+  }
+
+  .floating-die
+    span:nth-child(3) {
+    grid-area:
+      2 / 2;
+  }
+
+  .floating-die
+    span:nth-child(4) {
+    grid-area:
+      3 / 1;
+  }
+
+  .floating-die
+    span:nth-child(5) {
+    grid-area:
+      3 / 3;
+  }
+
+  .block-stack {
+    position: absolute;
+
+    left: 165px;
+    bottom: 5px;
+
+    width: 120px;
+    height: 110px;
+
+    display: grid;
+
+    grid-template-columns:
+      repeat(4, 1fr);
+
+    grid-template-rows:
+      repeat(4, 1fr);
+
+    gap: 4px;
+
+    transform:
+      rotate(-4deg);
+  }
+
+  .block-stack span {
+    border-radius:
+      4px;
+  }
+
+  .block-stack
+    span:nth-child(1) {
+    grid-area:
+      3 / 1 / 5 / 2;
+
+    background:
+      #34d399;
+  }
+
+  .block-stack
+    span:nth-child(2) {
+    grid-area:
+      2 / 2 / 5 / 3;
+
+    background:
+      #fbbf24;
+  }
+
+  .block-stack
+    span:nth-child(3) {
+    grid-area:
+      3 / 3 / 5 / 4;
+
+    background:
+      #fb7185;
+  }
+
+  .block-stack
+    span:nth-child(4) {
+    grid-area:
+      1 / 4 / 5 / 5;
+
+    background:
+      #60a5fa;
+  }
+
+  .block-stack
+    span:nth-child(5) {
+    grid-area:
+      4 / 1 / 5 / 5;
+
+    background:
+      rgba(
+        255,
+        255,
+        255,
+        0.1
+      );
+  }
+
+  .featured-section {
+    padding-top:
+      3rem;
+
+    padding-bottom:
+      7rem;
+  }
+
+  .section-heading {
+    display: flex;
+
+    align-items:
+      end;
+
+    justify-content:
+      space-between;
+
+    gap: 1rem;
+
+    margin-bottom:
+      2rem;
+  }
+
+  .section-heading
+    > div
+    > span,
+  .how-copy > span,
+  .cta > div > span {
+    color:
+      #fb923c;
+
+    font-size:
+      0.65rem;
+
+    font-weight:
+      950;
+
+    letter-spacing:
+      0.14em;
+  }
+
+  .section-heading h2,
+  .how-copy h2 {
+    margin:
+      0.4rem 0 0;
+
+    font-size:
+      clamp(
+        2.2rem,
+        5vw,
+        4rem
+      );
+
+    letter-spacing:
+      -0.05em;
+  }
+
+  .section-heading a {
+    color:
+      #fde68a;
+
+    font-size:
+      0.8rem;
+
+    font-weight:
+      800;
+  }
+
+  .featured-grid {
+    display: grid;
+
+    grid-template-columns:
+      repeat(4, 1fr);
+
+    gap: 1rem;
+  }
+
+  .featured-card {
+    overflow: hidden;
 
     border:
       1px solid
-      rgba(255, 255, 255, 0.07);
+      rgba(
+        255,
+        255,
+        255,
+        0.07
+      );
 
-    border-radius: 20px;
+    border-radius:
+      22px;
 
     background:
-      rgba(255, 255, 255, 0.025);
+      rgba(
+        255,
+        255,
+        255,
+        0.025
+      );
+
+    transition:
+      transform 180ms ease,
+      border-color 180ms ease,
+      box-shadow 180ms ease;
   }
 
-  .features article > span {
-    color: #c084fc;
+  .featured-card:hover {
+    transform:
+      translateY(-6px);
 
-    font-size: 0.65rem;
-    font-weight: 900;
+    box-shadow:
+      0 25px 80px
+      rgba(
+        0,
+        0,
+        0,
+        0.25
+      );
   }
 
-  .features h2 {
+  .featured-card.flux:hover {
+    border-color:
+      rgba(
+        251,
+        113,
+        133,
+        0.35
+      );
+  }
+
+  .featured-card.sudorush:hover {
+    border-color:
+      rgba(
+        34,
+        211,
+        238,
+        0.35
+      );
+  }
+
+  .featured-card.stackfall:hover {
+    border-color:
+      rgba(
+        52,
+        211,
+        153,
+        0.35
+      );
+  }
+
+  .featured-card.diceforge:hover {
+    border-color:
+      rgba(
+        251,
+        191,
+        36,
+        0.35
+      );
+  }
+
+  .game-art {
+    height: 220px;
+
+    position: relative;
+
+    overflow: hidden;
+
+    display: grid;
+
+    place-items:
+      center;
+  }
+
+  .flux .game-art {
+    background:
+      radial-gradient(
+        circle at center,
+        rgba(
+          251,
+          113,
+          133,
+          0.3
+        ),
+        rgba(
+          127,
+          29,
+          29,
+          0.15
+        )
+      );
+  }
+
+  .sudorush .game-art {
+    background:
+      radial-gradient(
+        circle at center,
+        rgba(
+          34,
+          211,
+          238,
+          0.27
+        ),
+        rgba(
+          12,
+          74,
+          110,
+          0.16
+        )
+      );
+  }
+
+  .stackfall .game-art {
+    background:
+      radial-gradient(
+        circle at center,
+        rgba(
+          52,
+          211,
+          153,
+          0.25
+        ),
+        rgba(
+          6,
+          78,
+          59,
+          0.14
+        )
+      );
+  }
+
+  .diceforge .game-art {
+    background:
+      radial-gradient(
+        circle at center,
+        rgba(
+          251,
+          191,
+          36,
+          0.28
+        ),
+        rgba(
+          120,
+          53,
+          15,
+          0.14
+        )
+      );
+  }
+
+  .mini-card {
+    position: absolute;
+
+    width: 70px;
+    height: 100px;
+
+    display: grid;
+
+    place-items:
+      center;
+
+    border-radius:
+      13px;
+
+    color:
+      white;
+
+    font-size:
+      1.7rem;
+
+    font-weight:
+      900;
+
+    box-shadow:
+      0 15px 40px
+      rgba(
+        0,
+        0,
+        0,
+        0.2
+      );
+  }
+
+  .mini-card.one {
+    transform:
+      translateX(-45px)
+      rotate(-14deg);
+
+    background:
+      #e11d48;
+  }
+
+  .mini-card.two {
+    z-index: 2;
+
+    background:
+      #f97316;
+  }
+
+  .mini-card.three {
+    transform:
+      translateX(45px)
+      rotate(14deg);
+
+    background:
+      #8b5cf6;
+  }
+
+  .sudoku-board {
+    width: 145px;
+    height: 145px;
+
+    display: grid;
+
+    grid-template-columns:
+      repeat(3, 1fr);
+
+    gap: 4px;
+
+    padding:
+      8px;
+
+    border:
+      2px solid
+      rgba(
+        255,
+        255,
+        255,
+        0.3
+      );
+
+    border-radius:
+      14px;
+
+    background:
+      rgba(
+        8,
+        47,
+        73,
+        0.55
+      );
+
+    transform:
+      rotate(4deg);
+  }
+
+  .sudoku-board span {
+    display: grid;
+
+    place-items:
+      center;
+
+    border-radius:
+      7px;
+
+    color:
+      #cffafe;
+
+    background:
+      rgba(
+        255,
+        255,
+        255,
+        0.06
+      );
+
+    font-weight:
+      850;
+  }
+
+  .stack-art {
+    width: 150px;
+    height: 150px;
+
+    display: grid;
+
+    grid-template-columns:
+      repeat(4, 1fr);
+
+    grid-template-rows:
+      repeat(5, 1fr);
+
+    gap: 5px;
+
+    transform:
+      rotate(-3deg);
+  }
+
+  .stack-art span {
+    border-radius:
+      5px;
+  }
+
+  .stack-art
+    span:nth-child(1) {
+    grid-area:
+      1 / 2 / 3 / 3;
+
+    background:
+      #fbbf24;
+  }
+
+  .stack-art
+    span:nth-child(2) {
+    grid-area:
+      3 / 1 / 5 / 2;
+
+    background:
+      #34d399;
+  }
+
+  .stack-art
+    span:nth-child(3) {
+    grid-area:
+      3 / 2 / 5 / 3;
+
+    background:
+      #fb7185;
+  }
+
+  .stack-art
+    span:nth-child(4) {
+    grid-area:
+      2 / 3 / 5 / 4;
+
+    background:
+      #60a5fa;
+  }
+
+  .stack-art
+    span:nth-child(5) {
+    grid-area:
+      4 / 4 / 6 / 5;
+
+    background:
+      #f97316;
+  }
+
+  .stack-art
+    span:nth-child(6) {
+    grid-area:
+      5 / 1 / 6 / 4;
+
+    background:
+      #8b5cf6;
+  }
+
+  .dice-art {
+    position: relative;
+
+    width: 160px;
+    height: 150px;
+  }
+
+  .dice-a,
+  .dice-b {
+    position: absolute;
+
+    width: 95px;
+    height: 95px;
+
+    display: grid;
+
+    place-items:
+      center;
+
+    border-radius:
+      22px;
+
+    color:
+      #291707;
+
+    background:
+      linear-gradient(
+        135deg,
+        #fef3c7,
+        #f59e0b
+      );
+
+    font-size:
+      4rem;
+
+    box-shadow:
+      0 18px 45px
+      rgba(
+        0,
+        0,
+        0,
+        0.2
+      );
+  }
+
+  .dice-a {
+    left: 0;
+    top: 20px;
+
+    transform:
+      rotate(-13deg);
+  }
+
+  .dice-b {
+    right: 0;
+    bottom: 5px;
+
+    transform:
+      rotate(11deg);
+
+    background:
+      linear-gradient(
+        135deg,
+        #fdba74,
+        #fb7185
+      );
+  }
+
+  .game-copy {
+    padding:
+      1.2rem;
+  }
+
+  .game-copy > div {
+    display: flex;
+
+    justify-content:
+      space-between;
+
+    align-items:
+      center;
+  }
+
+  .game-copy > div span {
+    color:
+      rgba(
+        255,
+        255,
+        255,
+        0.4
+      );
+
+    font-size:
+      0.63rem;
+
+    font-weight:
+      800;
+
+    text-transform:
+      uppercase;
+  }
+
+  .game-copy > div small {
+    color:
+      #fde68a;
+
+    font-size:
+      0.58rem;
+  }
+
+  .game-copy h3 {
     margin:
-      1rem 0 0.5rem;
+      0.65rem 0 0.2rem;
+
+    font-size:
+      1.35rem;
   }
 
-  .features p {
+  .game-copy p {
     margin: 0;
 
     color:
-      rgba(255, 255, 255, 0.5);
+      rgba(
+        255,
+        255,
+        255,
+        0.4
+      );
 
-    line-height: 1.6;
+    font-size:
+      0.72rem;
+  }
+
+  .how-it-works {
+    display: grid;
+
+    grid-template-columns:
+      minmax(0, 0.75fr)
+      minmax(0, 1.25fr);
+
+    gap: 4rem;
+
+    padding-top:
+      3rem;
+
+    padding-bottom:
+      8rem;
+  }
+
+  .how-copy p {
+    max-width:
+      470px;
+
+    color:
+      rgba(
+        255,
+        255,
+        255,
+        0.48
+      );
+
+    line-height:
+      1.75;
+  }
+
+  .steps {
+    display: grid;
+
+    grid-template-columns:
+      1fr 1fr;
+
+    gap: 1rem;
+  }
+
+  .steps article {
+    position: relative;
+
+    padding:
+      1.4rem;
+
+    border:
+      1px solid
+      rgba(
+        255,
+        255,
+        255,
+        0.07
+      );
+
+    border-radius:
+      20px;
+
+    background:
+      rgba(
+        255,
+        255,
+        255,
+        0.025
+      );
+  }
+
+  .step-number {
+    position: absolute;
+
+    top: 1rem;
+    right: 1rem;
+
+    color:
+      rgba(
+        255,
+        255,
+        255,
+        0.15
+      );
+
+    font-size:
+      0.65rem;
+
+    font-weight:
+      900;
+  }
+
+  .step-icon {
+    width: 42px;
+    height: 42px;
+
+    display: grid;
+
+    place-items:
+      center;
+
+    border-radius:
+      13px;
+
+    font-weight:
+      950;
+  }
+
+  .step-icon.warm {
+    color:
+      #451a03;
+
+    background:
+      #fbbf24;
+  }
+
+  .step-icon.cyan {
+    color:
+      #083344;
+
+    background:
+      #67e8f9;
+  }
+
+  .step-icon.green {
+    color:
+      #052e16;
+
+    background:
+      #6ee7b7;
+  }
+
+  .step-icon.coral {
+    color:
+      #4c0519;
+
+    background:
+      #fb7185;
+  }
+
+  .steps h3 {
+    margin:
+      1rem 0 0.4rem;
+  }
+
+  .steps p {
+    margin: 0;
+
+    color:
+      rgba(
+        255,
+        255,
+        255,
+        0.42
+      );
+
+    font-size:
+      0.82rem;
+
+    line-height:
+      1.55;
+  }
+
+  .cta {
+    position: relative;
+
+    overflow: hidden;
+
+    display: flex;
+
+    align-items:
+      center;
+
+    justify-content:
+      space-between;
+
+    gap: 2rem;
+
+    margin-bottom:
+      7rem;
+
+    padding:
+      2.5rem;
+
+    border:
+      1px solid
+      rgba(
+        251,
+        191,
+        36,
+        0.15
+      );
+
+    border-radius:
+      26px;
+
+    background:
+      linear-gradient(
+        120deg,
+        rgba(
+          245,
+          158,
+          11,
+          0.09
+        ),
+        rgba(
+          249,
+          115,
+          22,
+          0.06
+        ),
+        rgba(
+          45,
+          212,
+          191,
+          0.04
+        )
+      );
+  }
+
+  .cta h2 {
+    margin:
+      0.5rem 0 0;
+
+    font-size:
+      clamp(
+        2rem,
+        5vw,
+        3.5rem
+      );
+
+    letter-spacing:
+      -0.05em;
+  }
+
+  .cta-decoration {
+    position: absolute;
+
+    right: 210px;
+
+    opacity:
+      0.2;
+
+    pointer-events:
+      none;
+  }
+
+  .cta-die,
+  .cta-card {
+    position: absolute;
+
+    font-size:
+      5rem;
+  }
+
+  .cta-die {
+    top: -70px;
+    left: -30px;
+
+    transform:
+      rotate(-15deg);
+  }
+
+  .cta-card {
+    top: 5px;
+    left: 60px;
+
+    transform:
+      rotate(15deg);
   }
 
   @media (
-    max-width: 900px
+    max-width: 1000px
   ) {
     .hero {
       grid-template-columns:
@@ -540,13 +2130,109 @@ import BaseLayout
       gap: 2rem;
     }
 
-    .hero-visual {
-      min-height: 500px;
+    .hero-art {
+      min-height:
+        560px;
+
+      max-width:
+        600px;
+
+      width: 100%;
+
+      margin: 0 auto;
     }
 
-    .features {
+    .featured-grid {
+      grid-template-columns:
+        repeat(2, 1fr);
+    }
+
+    .how-it-works {
       grid-template-columns:
         1fr;
+    }
+  }
+
+  @media (
+    max-width: 650px
+  ) {
+    .hero {
+      padding-top:
+        3rem;
+    }
+
+    .hero h1 {
+      font-size:
+        clamp(
+          3.4rem,
+          17vw,
+          5rem
+        );
+    }
+
+    .hero-stats {
+      gap: 1.4rem;
+    }
+
+    .hero-art {
+      min-height:
+        500px;
+    }
+
+    .hero-console {
+      width:
+        calc(
+          100% - 50px
+        );
+
+      right: 15px;
+    }
+
+    .floating-card {
+      transform:
+        scale(0.8);
+    }
+
+    .card-red {
+      left: -10px;
+    }
+
+    .floating-die {
+      transform:
+        scale(0.8)
+        rotate(-10deg);
+
+      left: -5px;
+    }
+
+    .featured-grid {
+      grid-template-columns:
+        1fr;
+    }
+
+    .steps {
+      grid-template-columns:
+        1fr;
+    }
+
+    .section-heading {
+      align-items:
+        flex-start;
+
+      flex-direction:
+        column;
+    }
+
+    .cta {
+      align-items:
+        flex-start;
+
+      flex-direction:
+        column;
+    }
+
+    .cta-decoration {
+      display: none;
     }
   }
 </style>

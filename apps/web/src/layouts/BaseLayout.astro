@@ -9,8 +9,11 @@ interface Props {
 const {
   title = 'Kivo Play',
   description =
-    'Fast multiplayer mini-games powered by Astro and Rust.'
+    'Fast multiplayer mini-games built with Astro and Rust.'
 } = Astro.props;
+
+const pathname =
+  Astro.url.pathname;
 ---
 
 <!doctype html>
@@ -31,7 +34,7 @@ const {
 
     <meta
       name="theme-color"
-      content="#08090d"
+      content="#0b0d12"
     />
 
     <link
@@ -44,9 +47,14 @@ const {
 
   <body>
     <div
-      class="background-effects"
+      class="global-background"
       aria-hidden="true"
     >
+      <div class="background-orb orb-one"></div>
+      <div class="background-orb orb-two"></div>
+      <div class="background-orb orb-three"></div>
+
+      <div class="background-grid"></div>
     </div>
 
     <header class="site-nav">
@@ -54,30 +62,58 @@ const {
         class="brand"
         href="/"
       >
-        <span class="brand-mark">
+        <span class="brand-icon">
           K
         </span>
 
-        <span>
-          Kivo Play
-        </span>
+        <span class="brand-copy">
+          <strong>
+            Kivo Play
+          </strong>
 
-        <small>
-          ALPHA
-        </small>
+          <small>
+            ALPHA
+          </small>
+        </span>
       </a>
 
-      <nav>
-        <a href="/">
+      <nav class="nav-links">
+        <a
+          class:list={[
+            {
+              active:
+                pathname === '/'
+            }
+          ]}
+          href="/"
+        >
           Home
         </a>
 
-        <a href="/games">
+        <a
+          class:list={[
+            {
+              active:
+                pathname.startsWith(
+                  '/games'
+                )
+            }
+          ]}
+          href="/games"
+        >
           Games
         </a>
 
         <a
-          class="nav-play"
+          class:list={[
+            'nav-play',
+            {
+              active:
+                pathname.startsWith(
+                  '/play'
+                )
+            }
+          ]}
           href="/play"
         >
           Play
@@ -88,12 +124,19 @@ const {
     <slot />
 
     <footer class="site-footer">
-      <span>
-        Kivo Play
-      </span>
+      <div>
+        <strong>
+          Kivo Play
+        </strong>
+
+        <span>
+          Play fast. Play together.
+        </span>
+      </div>
 
       <span>
-        Play fast. Play together.
+        Open-source multiplayer
+        experiment · Alpha
       </span>
     </footer>
   </body>

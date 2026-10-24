@@ -5,324 +5,1545 @@ import BaseLayout
 const games = [
   {
     name: 'Flux',
-    category: 'Cards',
+    category: 'Card Battle',
     players: '1–4 Players',
-    description:
-      'Fast competitive card battles built around dynamic families, effects and tactical disruption.',
     status: 'Planned',
-    accent: 'flux'
+    className: 'flux',
+    description:
+      'Fast card battles built around elemental families, disruptive effects and sudden momentum shifts.'
   },
   {
     name: 'SudoRush',
     category: 'Puzzle',
     players: '1–4 Players',
-    description:
-      'Competitive Sudoku where speed, accuracy and pressure turn a classic puzzle into a race.',
     status: 'Planned',
-    accent: 'sudoku'
+    className: 'sudorush',
+    description:
+      'Competitive Sudoku where players race through the same puzzle while only progress is shared.'
   },
   {
     name: 'Stackfall',
     category: 'Arcade',
     players: '1–4 Players',
-    description:
-      'Fast falling-block action designed for sprints, battles and competitive multiplayer.',
     status: 'Planned',
-    accent: 'stack'
+    className: 'stackfall',
+    description:
+      'A fast falling-block arcade game designed around sprints, battles and multiplayer pressure.'
   },
   {
     name: 'Diceforge',
-    category: 'Strategy',
+    category: 'Dice Strategy',
     players: '1–4 Players',
-    description:
-      'A dice-based strategy game focused on combinations, modifiers, bonuses and risky decisions.',
     status: 'Planned',
-    accent: 'dice'
+    className: 'diceforge',
+    description:
+      'Build powerful dice combinations with modifiers, bonuses, risky rerolls and strategic effects.'
   },
   {
     name: 'Crownshift',
     category: 'Strategy',
     players: '1–2 Players',
-    description:
-      'A future chess-inspired competitive game with fast and experimental match formats.',
     status: 'Future',
-    accent: 'crown'
+    className: 'crownshift',
+    description:
+      'A future chess-inspired game built around faster matches, unusual objectives and experimental modes.'
   },
   {
     name: 'Pocket Putt',
     category: 'Sports',
     players: '1–4 Players',
-    description:
-      'Multiplayer miniature golf with quick courses, trick shots and competitive modes.',
     status: 'Future',
-    accent: 'putt'
+    className: 'pocketputt',
+    description:
+      'Compact multiplayer mini-golf with short courses, trick shots and playful competitive modes.'
   }
 ];
 ---
 
 <BaseLayout
   title="Games — Kivo Play"
-  description="Explore the games planned for Kivo Play."
+  description="Explore the games being created for Kivo Play."
 >
-  <main class="games-page container">
-    <header class="games-header">
-      <span>
-        KIVO LIBRARY
-      </span>
+  <main class="games-page">
+    <section class="games-hero container">
+      <div>
+        <span class="page-kicker">
+          KIVO LIBRARY
+        </span>
 
-      <h1>
-        Games
-      </h1>
+        <h1>
+          Small games.
+          <span>
+            Big game nights.
+          </span>
+        </h1>
+
+        <p>
+          Every Kivo game is designed
+          around short sessions,
+          distinct mechanics and the
+          same multiplayer room system.
+        </p>
+      </div>
+
+      <div class="library-art">
+        <div class="library-card card-one">
+          ↯
+        </div>
+
+        <div class="library-card card-two">
+          7
+        </div>
+
+        <div class="library-die">
+          ⚄
+        </div>
+
+        <div class="library-blocks">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      </div>
+    </section>
+
+    <section class="games-library container">
+      <div class="library-toolbar">
+        <div>
+          <strong>
+            All games
+          </strong>
+
+          <span>
+            {games.length} projects
+          </span>
+        </div>
+
+        <a
+          class="play-link"
+          href="/play"
+        >
+          Open multiplayer →
+        </a>
+      </div>
+
+      <div class="games-grid">
+        {
+          games.map(
+            (
+              game,
+              index
+            ) => (
+              <article
+                class:list={[
+                  'game-card',
+                  game.className
+                ]}
+              >
+                <div class="game-visual">
+                  <span class="game-number">
+                    0{index + 1}
+                  </span>
+
+                  {
+                    game.name ===
+                      'Flux' && (
+                      <div class="flux-art">
+                        <span>
+                          ↯
+                        </span>
+
+                        <span>
+                          ↺
+                        </span>
+
+                        <span>
+                          ✦
+                        </span>
+                      </div>
+                    )
+                  }
+
+                  {
+                    game.name ===
+                      'SudoRush' && (
+                      <div class="sudoku-art">
+                        {
+                          [
+                            4,
+                            9,
+                            2,
+                            3,
+                            5,
+                            7,
+                            8,
+                            1,
+                            6
+                          ].map(
+                            (
+                              value
+                            ) => (
+                              <span>
+                                {value}
+                              </span>
+                            )
+                          )
+                        }
+                      </div>
+                    )
+                  }
+
+                  {
+                    game.name ===
+                      'Stackfall' && (
+                      <div class="stackfall-art">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                      </div>
+                    )
+                  }
+
+                  {
+                    game.name ===
+                      'Diceforge' && (
+                      <div class="diceforge-art">
+                        <span>
+                          ⚃
+                        </span>
+
+                        <span>
+                          ⚅
+                        </span>
+                      </div>
+                    )
+                  }
+
+                  {
+                    game.name ===
+                      'Crownshift' && (
+                      <div class="crown-art">
+                        ♛
+                      </div>
+                    )
+                  }
+
+                  {
+                    game.name ===
+                      'Pocket Putt' && (
+                      <div class="putt-art">
+                        <span class="flag">
+                          ⚑
+                        </span>
+
+                        <span class="ball"></span>
+
+                        <span class="hole"></span>
+                      </div>
+                    )
+                  }
+                </div>
+
+                <div class="game-content">
+                  <div class="game-meta">
+                    <span>
+                      {game.category}
+                    </span>
+
+                    <small>
+                      {game.status}
+                    </small>
+                  </div>
+
+                  <h2>
+                    {game.name}
+                  </h2>
+
+                  <strong class="players">
+                    {game.players}
+                  </strong>
+
+                  <p>
+                    {game.description}
+                  </p>
+
+                  <div class="game-footer">
+                    <span>
+                      In development
+                    </span>
+
+                    <span>
+                      Coming later
+                    </span>
+                  </div>
+                </div>
+              </article>
+            )
+          )
+        }
+      </div>
+    </section>
+
+    <section class="games-note container">
+      <div>
+        <span>
+          ONE PLATFORM
+        </span>
+
+        <h2>
+          Different games.
+          <br />
+          Shared multiplayer.
+        </h2>
+      </div>
 
       <p>
-        Small games with their own
-        identity, connected by the same
-        multiplayer platform.
+        Rooms, nicknames, Ready states,
+        turn order and future reconnect
+        systems are designed to be
+        reusable across the entire Kivo
+        library.
       </p>
-    </header>
-
-    <div class="games-grid">
-      {
-        games.map((game) => (
-          <article
-            class:list={[
-              'game-card',
-              game.accent
-            ]}
-          >
-            <div class="game-top">
-              <span>
-                {game.category}
-              </span>
-
-              <small>
-                {game.status}
-              </small>
-            </div>
-
-            <div
-              class="game-art"
-              aria-hidden="true"
-            >
-              <span>
-                {game.name
-                  .charAt(0)}
-              </span>
-            </div>
-
-            <h2>
-              {game.name}
-            </h2>
-
-            <strong>
-              {game.players}
-            </strong>
-
-            <p>
-              {game.description}
-            </p>
-
-            <div class="game-status">
-              In development
-            </div>
-          </article>
-        ))
-      }
-    </div>
+    </section>
   </main>
 </BaseLayout>
 
 <style>
   .games-page {
-    padding-top: 6rem;
-    padding-bottom: 7rem;
+    padding-bottom:
+      7rem;
   }
 
-  .games-header {
-    max-width: 700px;
+  .games-hero {
+    min-height:
+      530px;
 
-    margin-bottom: 3rem;
+    display: grid;
+
+    grid-template-columns:
+      minmax(0, 1fr)
+      minmax(350px, 0.65fr);
+
+    align-items: center;
+
+    gap: 4rem;
+
+    padding-top:
+      5rem;
+
+    padding-bottom:
+      4rem;
   }
 
-  .games-header > span {
-    color: #c084fc;
+  .page-kicker {
+    color:
+      #fb923c;
 
-    font-size: 0.7rem;
-    font-weight: 900;
+    font-size:
+      0.68rem;
 
-    letter-spacing: 0.15em;
+    font-weight:
+      950;
+
+    letter-spacing:
+      0.14em;
   }
 
-  .games-header h1 {
+  .games-hero h1 {
+    max-width:
+      720px;
+
     margin:
-      0.5rem 0;
+      0.8rem 0 1.4rem;
 
     font-size:
       clamp(
-        3rem,
-        7vw,
-        5rem
+        4rem,
+        8vw,
+        6.8rem
       );
 
+    line-height:
+      0.92;
+
     letter-spacing:
-      -0.05em;
+      -0.065em;
   }
 
-  .games-header p {
+  .games-hero h1 span {
+    display: block;
+
+    color:
+      transparent;
+
+    background:
+      linear-gradient(
+        90deg,
+        #fbbf24,
+        #fb7185,
+        #67e8f9
+      );
+
+    background-clip:
+      text;
+
+    -webkit-background-clip:
+      text;
+  }
+
+  .games-hero p {
+    max-width:
+      620px;
+
     margin: 0;
 
     color:
-      rgba(255, 255, 255, 0.5);
+      rgba(
+        255,
+        255,
+        255,
+        0.5
+      );
 
-    font-size: 1.05rem;
+    font-size:
+      1.05rem;
 
-    line-height: 1.7;
+    line-height:
+      1.75;
+  }
+
+  .library-art {
+    position: relative;
+
+    min-height:
+      330px;
+  }
+
+  .library-card {
+    position: absolute;
+
+    width: 115px;
+    height: 160px;
+
+    display: grid;
+
+    place-items: center;
+
+    border:
+      1px solid
+      rgba(
+        255,
+        255,
+        255,
+        0.12
+      );
+
+    border-radius:
+      20px;
+
+    color: white;
+
+    font-size:
+      3rem;
+
+    font-weight:
+      900;
+
+    box-shadow:
+      0 25px 65px
+      rgba(
+        0,
+        0,
+        0,
+        0.25
+      );
+  }
+
+  .card-one {
+    top: 45px;
+    left: 55px;
+
+    background:
+      linear-gradient(
+        145deg,
+        #be123c,
+        #fb7185
+      );
+
+    transform:
+      rotate(-13deg);
+  }
+
+  .card-two {
+    top: 80px;
+    left: 155px;
+
+    background:
+      linear-gradient(
+        145deg,
+        #0369a1,
+        #22d3ee
+      );
+
+    transform:
+      rotate(10deg);
+  }
+
+  .library-die {
+    position: absolute;
+
+    width: 115px;
+    height: 115px;
+
+    display: grid;
+
+    place-items: center;
+
+    right: 15px;
+    top: 20px;
+
+    border-radius:
+      25px;
+
+    color:
+      #2b1705;
+
+    background:
+      linear-gradient(
+        135deg,
+        #fde68a,
+        #fb923c
+      );
+
+    font-size:
+      5rem;
+
+    box-shadow:
+      0 25px 65px
+      rgba(
+        249,
+        115,
+        22,
+        0.18
+      );
+
+    transform:
+      rotate(12deg);
+  }
+
+  .library-blocks {
+    position: absolute;
+
+    width: 150px;
+    height: 100px;
+
+    right: 40px;
+    bottom: 20px;
+
+    display: flex;
+
+    align-items:
+      flex-end;
+
+    gap: 6px;
+  }
+
+  .library-blocks span {
+    flex: 1;
+
+    border-radius:
+      6px;
+  }
+
+  .library-blocks
+    span:nth-child(1) {
+    height: 55%;
+
+    background:
+      #34d399;
+  }
+
+  .library-blocks
+    span:nth-child(2) {
+    height: 100%;
+
+    background:
+      #fbbf24;
+  }
+
+  .library-blocks
+    span:nth-child(3) {
+    height: 72%;
+
+    background:
+      #fb7185;
+  }
+
+  .games-library {
+    padding-top:
+      2rem;
+  }
+
+  .library-toolbar {
+    display: flex;
+
+    align-items: center;
+
+    justify-content:
+      space-between;
+
+    gap: 1rem;
+
+    margin-bottom:
+      1.4rem;
+  }
+
+  .library-toolbar
+    > div {
+    display: grid;
+
+    gap: 0.1rem;
+  }
+
+  .library-toolbar
+    strong {
+    font-size:
+      1.15rem;
+  }
+
+  .library-toolbar span {
+    color:
+      rgba(
+        255,
+        255,
+        255,
+        0.35
+      );
+
+    font-size:
+      0.7rem;
+  }
+
+  .play-link {
+    color:
+      #fde68a;
+
+    font-size:
+      0.78rem;
+
+    font-weight:
+      800;
   }
 
   .games-grid {
     display: grid;
 
     grid-template-columns:
-      repeat(3, 1fr);
+      repeat(2, 1fr);
 
-    gap: 1rem;
+    gap: 1.2rem;
   }
 
   .game-card {
-    position: relative;
-
     overflow: hidden;
-
-    padding: 1.4rem;
 
     border:
       1px solid
-      rgba(255, 255, 255, 0.08);
+      rgba(
+        255,
+        255,
+        255,
+        0.07
+      );
 
-    border-radius: 22px;
+    border-radius:
+      24px;
 
     background:
-      rgba(255, 255, 255, 0.025);
+      rgba(
+        255,
+        255,
+        255,
+        0.025
+      );
 
     transition:
       transform 180ms ease,
-      border-color 180ms ease;
+      border-color 180ms ease,
+      box-shadow 180ms ease;
   }
 
   .game-card:hover {
     transform:
-      translateY(-4px);
+      translateY(-5px);
 
-    border-color:
-      rgba(192, 132, 252, 0.25);
+    box-shadow:
+      0 30px 90px
+      rgba(
+        0,
+        0,
+        0,
+        0.25
+      );
   }
 
-  .game-top {
+  .flux:hover {
+    border-color:
+      rgba(
+        251,
+        113,
+        133,
+        0.35
+      );
+  }
+
+  .sudorush:hover {
+    border-color:
+      rgba(
+        34,
+        211,
+        238,
+        0.35
+      );
+  }
+
+  .stackfall:hover {
+    border-color:
+      rgba(
+        52,
+        211,
+        153,
+        0.35
+      );
+  }
+
+  .diceforge:hover {
+    border-color:
+      rgba(
+        251,
+        191,
+        36,
+        0.35
+      );
+  }
+
+  .crownshift:hover {
+    border-color:
+      rgba(
+        96,
+        165,
+        250,
+        0.35
+      );
+  }
+
+  .pocketputt:hover {
+    border-color:
+      rgba(
+        110,
+        231,
+        183,
+        0.35
+      );
+  }
+
+  .game-visual {
+    position: relative;
+
+    min-height:
+      310px;
+
+    display: grid;
+
+    place-items: center;
+
+    overflow: hidden;
+  }
+
+  .flux .game-visual {
+    background:
+      radial-gradient(
+        circle,
+        rgba(
+          251,
+          113,
+          133,
+          0.28
+        ),
+        rgba(
+          127,
+          29,
+          29,
+          0.08
+        )
+      );
+  }
+
+  .sudorush
+    .game-visual {
+    background:
+      radial-gradient(
+        circle,
+        rgba(
+          34,
+          211,
+          238,
+          0.25
+        ),
+        rgba(
+          12,
+          74,
+          110,
+          0.08
+        )
+      );
+  }
+
+  .stackfall
+    .game-visual {
+    background:
+      radial-gradient(
+        circle,
+        rgba(
+          52,
+          211,
+          153,
+          0.24
+        ),
+        rgba(
+          6,
+          78,
+          59,
+          0.08
+        )
+      );
+  }
+
+  .diceforge
+    .game-visual {
+    background:
+      radial-gradient(
+        circle,
+        rgba(
+          251,
+          191,
+          36,
+          0.27
+        ),
+        rgba(
+          120,
+          53,
+          15,
+          0.08
+        )
+      );
+  }
+
+  .crownshift
+    .game-visual {
+    background:
+      radial-gradient(
+        circle,
+        rgba(
+          96,
+          165,
+          250,
+          0.24
+        ),
+        rgba(
+          30,
+          58,
+          138,
+          0.08
+        )
+      );
+  }
+
+  .pocketputt
+    .game-visual {
+    background:
+      radial-gradient(
+        circle,
+        rgba(
+          110,
+          231,
+          183,
+          0.25
+        ),
+        rgba(
+          6,
+          78,
+          59,
+          0.08
+        )
+      );
+  }
+
+  .game-number {
+    position: absolute;
+
+    top: 1rem;
+    left: 1rem;
+
+    color:
+      rgba(
+        255,
+        255,
+        255,
+        0.18
+      );
+
+    font-size:
+      0.62rem;
+
+    font-weight:
+      950;
+  }
+
+  .flux-art {
+    position: relative;
+
+    width: 230px;
+    height: 180px;
+  }
+
+  .flux-art span {
+    position: absolute;
+
+    width: 95px;
+    height: 135px;
+
+    display: grid;
+
+    place-items: center;
+
+    border-radius:
+      18px;
+
+    color:
+      white;
+
+    font-size:
+      2.3rem;
+
+    font-weight:
+      900;
+
+    box-shadow:
+      0 20px 55px
+      rgba(
+        0,
+        0,
+        0,
+        0.2
+      );
+  }
+
+  .flux-art
+    span:nth-child(1) {
+    left: 0;
+
+    background:
+      #e11d48;
+
+    transform:
+      rotate(-14deg);
+  }
+
+  .flux-art
+    span:nth-child(2) {
+    left: 68px;
+
+    z-index: 2;
+
+    background:
+      #f97316;
+  }
+
+  .flux-art
+    span:nth-child(3) {
+    right: 0;
+
+    background:
+      #8b5cf6;
+
+    transform:
+      rotate(14deg);
+  }
+
+  .sudoku-art {
+    width: 190px;
+    height: 190px;
+
+    display: grid;
+
+    grid-template-columns:
+      repeat(3, 1fr);
+
+    gap: 5px;
+
+    padding: 10px;
+
+    border:
+      2px solid
+      rgba(
+        255,
+        255,
+        255,
+        0.28
+      );
+
+    border-radius:
+      18px;
+
+    background:
+      rgba(
+        8,
+        47,
+        73,
+        0.5
+      );
+
+    transform:
+      rotate(3deg);
+  }
+
+  .sudoku-art span {
+    display: grid;
+
+    place-items: center;
+
+    border-radius:
+      8px;
+
+    color:
+      #cffafe;
+
+    background:
+      rgba(
+        255,
+        255,
+        255,
+        0.055
+      );
+
+    font-size:
+      1.15rem;
+
+    font-weight:
+      850;
+  }
+
+  .stackfall-art {
+    width: 200px;
+    height: 220px;
+
+    display: grid;
+
+    grid-template-columns:
+      repeat(4, 1fr);
+
+    grid-template-rows:
+      repeat(6, 1fr);
+
+    gap: 6px;
+
+    transform:
+      rotate(-2deg);
+  }
+
+  .stackfall-art span {
+    border-radius:
+      6px;
+  }
+
+  .stackfall-art
+    span:nth-child(1) {
+    grid-area:
+      2 / 1 / 5 / 2;
+
+    background:
+      #34d399;
+  }
+
+  .stackfall-art
+    span:nth-child(2) {
+    grid-area:
+      1 / 2 / 5 / 3;
+
+    background:
+      #fbbf24;
+  }
+
+  .stackfall-art
+    span:nth-child(3) {
+    grid-area:
+      3 / 3 / 6 / 4;
+
+    background:
+      #fb7185;
+  }
+
+  .stackfall-art
+    span:nth-child(4) {
+    grid-area:
+      2 / 4 / 5 / 5;
+
+    background:
+      #60a5fa;
+  }
+
+  .stackfall-art
+    span:nth-child(5) {
+    grid-area:
+      5 / 1 / 7 / 3;
+
+    background:
+      #f97316;
+  }
+
+  .stackfall-art
+    span:nth-child(6) {
+    grid-area:
+      5 / 4 / 7 / 5;
+
+    background:
+      #8b5cf6;
+  }
+
+  .diceforge-art {
+    width: 220px;
+    height: 180px;
+
+    position: relative;
+  }
+
+  .diceforge-art span {
+    position: absolute;
+
+    width: 115px;
+    height: 115px;
+
+    display: grid;
+
+    place-items: center;
+
+    border-radius:
+      25px;
+
+    color:
+      #271606;
+
+    font-size:
+      5rem;
+
+    box-shadow:
+      0 20px 55px
+      rgba(
+        0,
+        0,
+        0,
+        0.22
+      );
+  }
+
+  .diceforge-art
+    span:first-child {
+    left: 0;
+    top: 10px;
+
+    background:
+      linear-gradient(
+        135deg,
+        #fef3c7,
+        #f59e0b
+      );
+
+    transform:
+      rotate(-12deg);
+  }
+
+  .diceforge-art
+    span:last-child {
+    right: 0;
+    bottom: 0;
+
+    background:
+      linear-gradient(
+        135deg,
+        #fdba74,
+        #fb7185
+      );
+
+    transform:
+      rotate(10deg);
+  }
+
+  .crown-art {
+    color:
+      #bfdbfe;
+
+    font-size:
+      10rem;
+
+    text-shadow:
+      0 15px 50px
+      rgba(
+        59,
+        130,
+        246,
+        0.3
+      );
+
+    transform:
+      rotate(-4deg);
+  }
+
+  .putt-art {
+    position: relative;
+
+    width: 250px;
+    height: 190px;
+
+    border-radius:
+      50%
+      50%
+      18px
+      18px;
+
+    background:
+      linear-gradient(
+        180deg,
+        #34d399,
+        #15803d
+      );
+
+    transform:
+      perspective(500px)
+      rotateX(55deg);
+  }
+
+  .flag {
+    position: absolute;
+
+    top: -85px;
+    right: 55px;
+
+    color:
+      #fef3c7;
+
+    font-size:
+      5rem;
+
+    transform:
+      rotateX(-55deg);
+  }
+
+  .ball {
+    position: absolute;
+
+    width: 25px;
+    height: 25px;
+
+    left: 55px;
+    bottom: 45px;
+
+    border-radius:
+      50%;
+
+    background:
+      #fff;
+
+    box-shadow:
+      0 8px 18px
+      rgba(
+        0,
+        0,
+        0,
+        0.25
+      );
+  }
+
+  .hole {
+    position: absolute;
+
+    width: 35px;
+    height: 15px;
+
+    right: 50px;
+    bottom: 50px;
+
+    border-radius:
+      50%;
+
+    background:
+      #052e16;
+  }
+
+  .game-content {
+    padding:
+      1.5rem;
+  }
+
+  .game-meta {
     display: flex;
 
     justify-content:
       space-between;
 
-    align-items: center;
+    align-items:
+      center;
   }
 
-  .game-top span,
-  .game-top small {
-    font-size: 0.65rem;
-    font-weight: 900;
+  .game-meta span {
+    color:
+      rgba(
+        255,
+        255,
+        255,
+        0.42
+      );
 
-    letter-spacing: 0.08em;
+    font-size:
+      0.65rem;
+
+    font-weight:
+      850;
 
     text-transform:
       uppercase;
   }
 
-  .game-top span {
-    color: #d8b4fe;
-  }
+  .game-meta small {
+    padding:
+      0.3rem 0.5rem;
 
-  .game-top small {
-    opacity: 0.35;
-  }
+    border-radius:
+      999px;
 
-  .game-art {
-    height: 180px;
-
-    display: grid;
-    place-items: center;
-
-    margin:
-      1.2rem 0;
-
-    border-radius: 17px;
+    color:
+      #fde68a;
 
     background:
-      radial-gradient(
-        circle at center,
-        rgba(168, 85, 247, 0.18),
-        rgba(255, 255, 255, 0.02)
+      rgba(
+        245,
+        158,
+        11,
+        0.07
       );
+
+    font-size:
+      0.55rem;
+
+    font-weight:
+      900;
   }
 
-  .game-art span {
-    font-size: 5rem;
-    font-weight: 950;
-
-    opacity: 0.7;
-  }
-
-  .game-card h2 {
+  .game-content h2 {
     margin:
-      0 0 0.25rem;
+      0.8rem 0 0.3rem;
 
-    font-size: 1.5rem;
+    font-size:
+      1.8rem;
   }
 
-  .game-card > strong {
+  .players {
     color:
-      rgba(255, 255, 255, 0.45);
+      #d6d3d1;
 
-    font-size: 0.72rem;
+    font-size:
+      0.72rem;
   }
 
-  .game-card p {
-    min-height: 78px;
+  .game-content p {
+    min-height:
+      75px;
+
+    margin:
+      1rem 0;
 
     color:
-      rgba(255, 255, 255, 0.5);
+      rgba(
+        255,
+        255,
+        255,
+        0.45
+      );
 
-    line-height: 1.55;
-
-    font-size: 0.88rem;
+    line-height:
+      1.6;
   }
 
-  .game-status {
-    padding-top: 1rem;
+  .game-footer {
+    display: flex;
+
+    justify-content:
+      space-between;
+
+    padding-top:
+      1rem;
 
     border-top:
       1px solid
-      rgba(255, 255, 255, 0.06);
+      rgba(
+        255,
+        255,
+        255,
+        0.06
+      );
 
     color:
-      rgba(255, 255, 255, 0.3);
+      rgba(
+        255,
+        255,
+        255,
+        0.3
+      );
 
-    font-size: 0.68rem;
-    font-weight: 800;
+    font-size:
+      0.65rem;
+  }
+
+  .games-note {
+    display: grid;
+
+    grid-template-columns:
+      1fr 1fr;
+
+    align-items: center;
+
+    gap: 3rem;
+
+    margin-top:
+      6rem;
+
+    padding:
+      2.4rem;
+
+    border:
+      1px solid
+      rgba(
+        96,
+        165,
+        250,
+        0.12
+      );
+
+    border-radius:
+      24px;
+
+    background:
+      linear-gradient(
+        120deg,
+        rgba(
+          59,
+          130,
+          246,
+          0.06
+        ),
+        rgba(
+          45,
+          212,
+          191,
+          0.04
+        )
+      );
+  }
+
+  .games-note span {
+    color:
+      #67e8f9;
+
+    font-size:
+      0.62rem;
+
+    font-weight:
+      950;
+
+    letter-spacing:
+      0.13em;
+  }
+
+  .games-note h2 {
+    margin:
+      0.5rem 0 0;
+
+    font-size:
+      clamp(
+        2rem,
+        4vw,
+        3.3rem
+      );
+
+    letter-spacing:
+      -0.05em;
+  }
+
+  .games-note p {
+    margin: 0;
+
+    color:
+      rgba(
+        255,
+        255,
+        255,
+        0.48
+      );
+
+    line-height:
+      1.7;
   }
 
   @media (
     max-width: 900px
   ) {
+    .games-hero {
+      grid-template-columns:
+        1fr;
+    }
+
+    .library-art {
+      max-width:
+        500px;
+
+      width: 100%;
+    }
+
     .games-grid {
       grid-template-columns:
-        repeat(2, 1fr);
+        1fr;
     }
   }
 
   @media (
-    max-width: 600px
+    max-width: 650px
   ) {
-    .games-grid {
+    .games-hero {
+      padding-top:
+        3rem;
+    }
+
+    .games-hero h1 {
+      font-size:
+        clamp(
+          3.3rem,
+          15vw,
+          5rem
+        );
+    }
+
+    .library-art {
+      min-height:
+        280px;
+
+      transform:
+        scale(0.9);
+    }
+
+    .games-note {
       grid-template-columns:
         1fr;
     }

@@ -11,9 +11,24 @@
   import TurnOrderResult
     from '../turn-order/TurnOrderResult.svelte';
 
+  import GameSelector
+    from './GameSelector.svelte';
+
+  import SelectedGameCard
+    from './SelectedGameCard.svelte';
+
+  import MatchShell
+    from '../match/MatchShell.svelte';
+
   import {
     KivoWebSocket
   } from '@/lib/networking/websocket';
+
+  import {
+    mapFluxRoundResult,
+    mapFluxState,
+    mapFluxStealOffer
+  } from '@/lib/networking/messages';
 
   import type {
     ConnectionStatus,
@@ -26,12 +41,25 @@
     TurnOrderPlayer
   } from '@/lib/networking/messages';
 
+  import type {
+    GameId
+  } from '@/games/types';
+
+  import type {
+    ClashColor,
+    FluxCard,
+    FluxMatchState,
+    FluxRoundResult,
+    FluxStealOffer
+  } from '@/games/flux/types';
+
   type Screen =
     | 'entry'
     | 'lobby'
     | 'countdown'
     | 'dice'
-    | 'ranking';
+    | 'ranking'
+    | 'match';
 
   const connection =
     new KivoWebSocket();
@@ -73,6 +101,50 @@
   let roomVisibility = '';
 
   let roomMaxPlayers = 4;
+
+  let selectedGame:
+    GameId | null =
+      null;
+
+  let showGameSelector =
+    false;
+
+  let fluxState:
+    FluxMatchState | null =
+      null;
+
+  let fluxPlayableCardIds:
+    string[] = [];
+
+  let fluxWinnerName = '';
+
+  let fluxRoundResult:
+    FluxRoundResult | null =
+      null;
+
+  let fluxRoundReadyPlayerIds:
+    string[] = [];
+
+  let fluxRoundAllReady =
+    false;
+
+  let latestFluxRevision =
+    -1;
+
+  let fluxImpactText = '';
+
+  let fluxImpactSerial = 0;
+
+  let fluxStealOffer:
+    FluxStealOffer | null =
+      null;
+
+  let pendingStealCardId:
+    string | null =
+      null;
+
+  let resultTransitionDone =
+    false;
 
   let players: Player[] = [];
 
@@ -179,6 +251,16 @@
 
         physicsFrames = [];
 
+        fluxState =
+          null;
+
+        fluxPlayableCardIds = [];
+
+        fluxWinnerName = '';
+
+        resultTransitionDone =
+          false;
+
         rollingDice =
           new Set<number>();
 
@@ -213,6 +295,167 @@
         screen =
           'ranking';
 
+        void enterSelectedGameAfterResults();
+
+        return;
+
+      case 'flux_state': {
+        const nextState =
+          mapFluxState(
+            message.state
+          );
+
+        const currentRound =
+          fluxState?.round ??
+          0;
+
+        if (
+          nextState.round <
+          currentRound
+        ) {
+          return;
+        }
+
+        if (
+          nextState.round ===
+            currentRound &&
+          nextState.revision <
+            latestFluxRevision
+        ) {
+          return;
+        }
+
+        if (
+          nextState.round >
+          currentRound
+        ) {
+          latestFluxRevision =
+            -1;
+        }
+
+        latestFluxRevision =
+          nextState.revision;
+
+        /*
+         * A new round state is authoritative.
+         * Clear the previous round overlay on every client,
+         * not only on the host who clicked Next Round.
+         */
+        if (
+          fluxRoundResult &&
+          (
+            nextState.round !==
+              fluxRoundResult.round ||
+            (
+              nextState.round === 1 &&
+              nextState.scores.every(
+                (score) =>
+                  score.score === 0
+              )
+            )
+          )
+        ) {
+          /*
+           * Covers both:
+           * - normal Next Round (round increases)
+           * - Again (new match resets to round 1 / score 0)
+           *
+           * Every client clears the old result overlay.
+           */
+          fluxRoundResult =
+            null;
+
+          fluxRoundReadyPlayerIds =
+            [];
+
+          fluxRoundAllReady =
+            false;
+        }
+
+        fluxState =
+          nextState;
+
+        fluxPlayableCardIds =
+          message.playable_card_ids;
+
+        tryEnterSelectedGame();
+
+        return;
+      }
+
+      case 'flux_card_played':
+        /*
+         * This event is the exact card accepted by the server.
+         * It updates the center immediately and ignores stale
+         * played-card events.
+         */
+        if (
+          fluxState &&
+          message.revision >=
+            latestFluxRevision
+        ) {
+          latestFluxRevision =
+            message.revision;
+
+          fluxState = {
+            ...fluxState,
+
+            revision:
+              message.revision,
+
+            discardTop:
+              message.card
+          };
+        }
+
+        return;
+
+      case 'flux_steal_offer':
+        fluxStealOffer =
+          mapFluxStealOffer(
+            message
+          );
+
+        return;
+
+      case 'flux_steal_cancelled':
+        fluxStealOffer =
+          null;
+
+        pendingStealCardId =
+          null;
+
+        return;
+
+      case 'flux_round_ready_state':
+        fluxRoundReadyPlayerIds =
+          message.ready_player_ids;
+
+        fluxRoundAllReady =
+          message.all_ready;
+
+        return;
+
+      case 'flux_impact':
+        fluxImpactText =
+          message.text;
+
+        fluxImpactSerial += 1;
+
+        return;
+
+      case 'flux_round_finished':
+        fluxRoundResult =
+          mapFluxRoundResult(
+            message
+          );
+
+        fluxRoundReadyPlayerIds =
+          [];
+
+        fluxRoundAllReady =
+          false;
+
         return;
 
       case 'error':
@@ -240,6 +483,9 @@
 
     roomMaxPlayers =
       room.max_players;
+
+    selectedGame =
+      room.selected_game;
 
     players =
       room.players;
@@ -578,6 +824,261 @@
     });
   }
 
+  function openGameSelector():
+    void {
+    if (
+      playerId !==
+      hostId
+    ) {
+      return;
+    }
+
+    showGameSelector =
+      true;
+  }
+
+  function closeGameSelector():
+    void {
+    showGameSelector =
+      false;
+  }
+
+  function selectGame(
+    gameId:
+      GameId
+  ): void {
+    if (
+      playerId !==
+      hostId
+    ) {
+      return;
+    }
+
+    errorMessage = '';
+
+    const sent =
+      connection.send({
+        type:
+          'select_game',
+
+        game_id:
+          gameId
+      });
+
+    if (!sent) {
+      errorMessage =
+        'Connection lost.';
+
+      return;
+    }
+
+    showGameSelector =
+      false;
+  }
+
+  async function enterSelectedGameAfterResults():
+    Promise<void> {
+    /*
+     * TurnOrderResult uses:
+     * 3.5 s calculating
+     * + 4 s winner/loser
+     * = 7.5 s before the ranking.
+     *
+     * We wait 10.5 s total so the ranking
+     * remains visible for roughly 3 seconds.
+     */
+    await sleep(
+      10500
+    );
+
+    resultTransitionDone =
+      true;
+
+    tryEnterSelectedGame();
+  }
+
+  function tryEnterSelectedGame():
+    void {
+    if (
+      !resultTransitionDone ||
+      screen !== 'ranking'
+    ) {
+      return;
+    }
+
+    if (
+      selectedGame ===
+        'flux' &&
+      fluxState
+    ) {
+      screen =
+        'match';
+    }
+  }
+
+  function playFluxCard(
+    card:
+      FluxCard,
+
+    color?:
+      ClashColor,
+
+    targetPlayerId?:
+      string
+  ): void {
+    errorMessage = '';
+
+    const sent =
+      connection.send({
+        type:
+          'flux_play_card',
+
+        card_id:
+          card.id,
+
+        chosen_color:
+          color ?? null,
+
+        target_player_id:
+          targetPlayerId ?? null
+      });
+
+    if (!sent) {
+      errorMessage =
+        'Connection lost.';
+    }
+  }
+
+  function beginFluxSteal(
+    card:
+      FluxCard,
+
+    targetPlayerId:
+      string
+  ): void {
+    errorMessage = '';
+
+    pendingStealCardId =
+      card.id;
+
+    const sent =
+      connection.send({
+        type:
+          'flux_begin_steal',
+
+        card_id:
+          card.id,
+
+        target_player_id:
+          targetPlayerId
+      });
+
+    if (!sent) {
+      pendingStealCardId =
+        null;
+
+      errorMessage =
+        'Connection lost.';
+    }
+  }
+
+  function chooseFluxStealCard(
+    cardId:
+      string
+  ): void {
+    if (
+      !fluxStealOffer
+    ) {
+      return;
+    }
+
+    errorMessage = '';
+
+    const sent =
+      connection.send({
+        type:
+          'flux_choose_steal',
+
+        offer_id:
+          fluxStealOffer
+            .offerId,
+
+        card_id:
+          cardId
+      });
+
+    if (!sent) {
+      errorMessage =
+        'Connection lost.';
+
+      return;
+    }
+
+    fluxStealOffer =
+      null;
+
+    pendingStealCardId =
+      null;
+  }
+
+  function callFluxClash():
+    void {
+    connection.send({
+      type:
+        'flux_clash'
+    });
+  }
+
+  function toggleFluxRoundReady():
+    void {
+    const ready =
+      !fluxRoundReadyPlayerIds
+        .includes(
+          playerId
+        );
+
+    connection.send({
+      type:
+        'flux_round_ready',
+      ready
+    });
+  }
+
+  function nextFluxRound():
+    void {
+    connection.send({
+      type:
+        'flux_next_round'
+    });
+  }
+
+  function playFluxAgain():
+    void {
+    fluxRoundResult =
+      null;
+
+    connection.send({
+      type:
+        'flux_play_again'
+    });
+  }
+
+  function drawFluxCard():
+    void {
+    errorMessage = '';
+
+    const sent =
+      connection.send({
+        type:
+          'flux_draw'
+      });
+
+    if (!sent) {
+      errorMessage =
+        'Connection lost.';
+    }
+  }
+
   function toggleReady():
     void {
     const me =
@@ -606,6 +1107,13 @@
   function startGame():
     void {
     errorMessage = '';
+
+    if (!selectedGame) {
+      errorMessage =
+        'Select a game before starting.';
+
+      return;
+    }
 
     connection.send({
       type:
@@ -773,6 +1281,44 @@
     ranking = [];
 
     physicsFrames = [];
+
+    selectedGame =
+      null;
+
+    showGameSelector =
+      false;
+
+    fluxState =
+      null;
+
+    fluxPlayableCardIds = [];
+
+    fluxWinnerName = '';
+
+    fluxRoundResult =
+      null;
+
+    fluxRoundReadyPlayerIds =
+      [];
+
+    fluxRoundAllReady =
+      false;
+
+    latestFluxRevision =
+      -1;
+
+    fluxImpactText = '';
+
+    fluxImpactSerial = 0;
+
+    fluxStealOffer =
+      null;
+
+    pendingStealCardId =
+      null;
+
+    resultTransitionDone =
+      false;
 
     rooms = [];
 
@@ -1447,6 +1993,27 @@
       {/if}
     </div>
 
+    <SelectedGameCard
+      gameId={selectedGame}
+      canChange={
+        playerId === hostId
+      }
+      onChange={
+        openGameSelector
+      }
+    />
+
+    {#if !selectedGame && playerId === hostId}
+      <button
+        class="choose-game-button"
+        onclick={
+          openGameSelector
+        }
+      >
+        Choose Game
+      </button>
+    {/if}
+
     <ReadyControls
       {playerId}
       {hostId}
@@ -1495,6 +2062,95 @@
     {ranking}
     onLeave={leaveRoom}
   />
+
+{:else if screen === 'match' && selectedGame === 'flux' && fluxState}
+  <MatchShell
+    gameId="flux"
+    {playerId}
+    {fluxState}
+    fluxPlayableCardIds={
+      fluxPlayableCardIds
+    }
+    fluxStealOffer={
+      fluxStealOffer
+    }
+    fluxRoundResult={
+      fluxRoundResult
+    }
+    fluxRoundReadyPlayerIds={
+      fluxRoundReadyPlayerIds
+    }
+    fluxRoundAllReady={
+      fluxRoundAllReady
+    }
+    fluxImpactText={
+      fluxImpactText
+    }
+    fluxImpactSerial={
+      fluxImpactSerial
+    }
+    {hostId}
+    onFluxPlay={
+      playFluxCard
+    }
+    onFluxDraw={
+      drawFluxCard
+    }
+    onFluxBeginSteal={
+      beginFluxSteal
+    }
+    onFluxChooseSteal={
+      chooseFluxStealCard
+    }
+    onFluxClash={
+      callFluxClash
+    }
+    onFluxToggleRoundReady={
+      toggleFluxRoundReady
+    }
+    onFluxNextRound={
+      nextFluxRound
+    }
+    onFluxPlayAgain={
+      playFluxAgain
+    }
+    onLeave={
+      leaveRoom
+    }
+  />
+{/if}
+
+{#if showGameSelector}
+  <div class="modal-layer">
+    <button
+      class="modal-backdrop"
+      aria-label="Close game selector"
+      onclick={
+        closeGameSelector
+      }
+    ></button>
+
+    <section class="game-selector-modal">
+      <GameSelector
+        selectedGame={selectedGame}
+        disabled={
+          playerId !== hostId
+        }
+        onSelect={
+          selectGame
+        }
+      />
+
+      <button
+        class="cancel-button"
+        onclick={
+          closeGameSelector
+        }
+      >
+        Cancel
+      </button>
+    </section>
+  </div>
 {/if}
 
 {#if showPublicConfirm && selectedRoom}
@@ -2891,5 +3547,43 @@
 
       grid-row: 1;
     }
+  }
+
+  .choose-game-button {
+    width: 100%;
+    padding: 0.78rem;
+    border: 1px solid rgba(251, 191, 36, 0.28);
+    border-radius: 13px;
+    color: #fde68a;
+    background: rgba(245, 158, 11, 0.06);
+    cursor: pointer;
+    font: inherit;
+    font-weight: 900;
+  }
+
+  .game-selector-modal {
+    position: relative;
+    z-index: 2;
+    width: min(680px, calc(100% - 2rem));
+    max-height: calc(100dvh - 3rem);
+    overflow-y: auto;
+    padding: 1.1rem;
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 20px;
+    background: rgba(17, 19, 26, 0.98);
+    box-shadow: 0 30px 90px rgba(0, 0, 0, 0.45);
+  }
+
+  .game-selector-modal .cancel-button {
+    width: 100%;
+    margin-top: 0.8rem;
+    padding: 0.7rem;
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 11px;
+    color: rgba(255, 255, 255, 0.65);
+    background: rgba(255, 255, 255, 0.03);
+    cursor: pointer;
+    font: inherit;
+    font-weight: 850;
   }
 </style>

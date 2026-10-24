@@ -9,8 +9,22 @@ export type TurnOrderPlayer = {
   id: string;
   name: string;
   rolls: Array<number | null>;
+  rolled: boolean[];
   total: number;
   complete: boolean;
+  roll_count: number;
+};
+
+export type DiePose = {
+  owner_id: string;
+  die_index: number;
+  x: number;
+  y: number;
+  rotation: number;
+};
+
+export type PhysicsFrame = {
+  dice: DiePose[];
 };
 
 export type RankingEntry = {
@@ -42,9 +56,7 @@ export type RoomSummary = {
 };
 
 export type ClientMessage =
-  | {
-      type: 'ping';
-    }
+  | { type: 'ping' }
   | {
       type: 'create_room';
       player_name: string;
@@ -71,18 +83,14 @@ export type ClientMessage =
       type: 'set_ready';
       ready: boolean;
     }
-  | {
-      type: 'start_game';
-    }
+  | { type: 'start_game' }
   | {
       type: 'roll_turn_die';
       die_index: number;
     };
 
 export type ServerMessage =
-  | {
-      type: 'pong';
-    }
+  | { type: 'pong' }
   | ({
       type: 'room_created';
       player_id: string;
@@ -105,6 +113,10 @@ export type ServerMessage =
       type: 'turn_order_started';
       room_code: string;
       players: TurnOrderPlayer[];
+    }
+  | {
+      type: 'turn_order_physics';
+      frames: PhysicsFrame[];
     }
   | {
       type: 'turn_order_state';

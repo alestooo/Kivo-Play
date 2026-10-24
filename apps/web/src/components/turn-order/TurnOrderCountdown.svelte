@@ -2,141 +2,127 @@
   export let text = '';
 </script>
 
-<section class="countdown-screen">
-  <div class="countdown-backdrop"></div>
+<section class="countdown">
+  <div class="backdrop"></div>
+  <div class="arena-preview">
+    <div class="arena-inner"></div>
+  </div>
 
   {#key text}
-    <div class="countdown-content">
-      <span class="countdown-badge">
-        KIVO PLAY · ALPHA
-      </span>
-
-      <p class="countdown-label">
-        TURN ORDER
-      </p>
-
-      <strong class="countdown-value">
-        {text}
-      </strong>
-
-      <span class="helper">
-        Get ready to roll.
-      </span>
+    <div class="content">
+      <span>KIVO PLAY · ALPHA</span>
+      <p>DICE ARENA</p>
+      <strong>{text}</strong>
+      <small>Get ready to roll.</small>
     </div>
   {/key}
 </section>
 
 <style>
-  .countdown-screen {
+  .countdown {
     position: fixed;
     inset: 0;
-
-    z-index: 100;
-
+    z-index: 700;
     display: grid;
     place-items: center;
+    overflow: hidden;
   }
 
-  .countdown-backdrop {
+  .backdrop {
     position: absolute;
     inset: 0;
-
     background:
-      radial-gradient(
-        circle at center,
-        rgba(124, 58, 237, 0.3),
-        rgba(3, 7, 18, 0.96)
-      );
-
-    backdrop-filter: blur(16px);
+      radial-gradient(circle at center, rgba(251, 146, 60, 0.16), transparent 35%),
+      rgba(6, 9, 14, 0.95);
+    backdrop-filter: blur(18px);
   }
 
-  .countdown-content {
+  .arena-preview {
+    position: absolute;
+    width: min(620px, 80vw);
+    aspect-ratio: 1;
+    opacity: 0.2;
+    clip-path: polygon(
+      29% 0, 71% 0, 100% 29%, 100% 71%,
+      71% 100%, 29% 100%, 0 71%, 0 29%
+    );
+    background: linear-gradient(145deg, #d6c3a6, #90785e);
+    animation: arena-enter 900ms ease;
+  }
+
+  .arena-inner {
+    position: absolute;
+    inset: 28px;
+    clip-path: inherit;
+    background: #063a2d;
+  }
+
+  .content {
     position: relative;
-    z-index: 1;
-
+    z-index: 2;
     display: grid;
     place-items: center;
-
     text-align: center;
-
-    animation: appear 400ms ease;
+    animation: number-enter 350ms ease;
   }
 
-  .countdown-badge {
+  .content > span {
     padding: 0.4rem 0.75rem;
-
     border-radius: 999px;
-
-    color: #d8b4fe;
-
-    background:
-      rgba(168, 85, 247, 0.15);
-
-    font-size: 0.7rem;
+    color: #fde68a;
+    background: rgba(245, 158, 11, 0.1);
+    font-size: 0.66rem;
     font-weight: 900;
-
-    letter-spacing: 0.12em;
+    letter-spacing: 0.13em;
   }
 
-  .countdown-label {
+  p {
     margin: 2rem 0 0;
-
-    color:
-      rgba(255, 255, 255, 0.45);
-
-    font-size: 0.78rem;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 0.72rem;
     font-weight: 900;
-
-    letter-spacing: 0.22em;
+    letter-spacing: 0.2em;
   }
 
-  .countdown-value {
-    min-height: 150px;
-
+  strong {
+    min-height: 145px;
     display: grid;
     place-items: center;
-
-    font-size:
-      clamp(
-        5rem,
-        18vw,
-        9rem
-      );
-
+    color: #fff7ed;
+    font-size: clamp(5rem, 18vw, 9rem);
     line-height: 1;
-
-    text-shadow:
-      0 0 50px
-      rgba(168, 85, 247, 0.4);
+    text-shadow: 0 0 60px rgba(251, 146, 60, 0.32);
   }
 
-  .helper {
-    color:
-      rgba(255, 255, 255, 0.5);
+  small {
+    color: rgba(255, 255, 255, 0.48);
   }
 
-  @keyframes appear {
+  @keyframes number-enter {
     from {
       opacity: 0;
-
-      transform:
-        scale(0.75);
+      transform: scale(0.55) rotate(-5deg);
     }
-
     to {
       opacity: 1;
-
-      transform:
-        scale(1);
+      transform: scale(1) rotate(0);
     }
   }
 
-  @media (
-    prefers-reduced-motion:
-      reduce
-  ) {
-    .countdown-content {
+  @keyframes arena-enter {
+    from {
+      opacity: 0;
+      transform: scale(0.7) rotate(-8deg);
+    }
+    to {
+      opacity: 0.2;
+      transform: scale(1) rotate(0);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .content,
+    .arena-preview {
       animation: none;
     }
   }

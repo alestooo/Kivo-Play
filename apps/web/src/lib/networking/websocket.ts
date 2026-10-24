@@ -4,191 +4,117 @@ import type {
   ServerMessage
 } from './messages';
 
-type MessageHandler = (
-  message: ServerMessage
-) => void;
+type MessageHandler = (message: ServerMessage) => void;
+type StatusHandler = (status: ConnectionStatus) => void;
 
-type StatusHandler = (
-  status: ConnectionStatus
-) => void;
-
-const DEFAULT_WS_URL =
-  'ws://127.0.0.1:3000/ws';
+const DEFAULT_URL = 'ws://127.0.0.1:3000/ws';
 
 export class KivoWebSocket {
-  private socket: WebSocket | null =
-    null;
-
-  private messageHandler:
-    | MessageHandler
-    | null = null;
-
-  private statusHandler:
-    | StatusHandler
-    | null = null;
+  private socket: WebSocket | null = null;
+  private connectingPromise: Promise<void> | null = null;
+  private messageHandler: MessageHandler | null = null;
+  private statusHandler: StatusHandler | null = null;
+  private intentionalClose = false;
 
   connect(
     onMessage: MessageHandler,
-    onStatus: StatusHandler
+    onStatus: StatusHandler,
+    url: string = DEFAULT_URL
   ): Promise<void> {
     this.messageHandler = onMessage;
     this.statusHandler = onStatus;
 
-    if (
-      this.socket?.readyState ===
-      WebSocket.OPEN
-    ) {
-      onStatus('connected');
-
+    if (this.socket?.readyState === WebSocket.OPEN) {
+      this.setStatus('connected');
       return Promise.resolve();
     }
 
-    if (
-      this.socket?.readyState ===
-      WebSocket.CONNECTING
-    ) {
-      return this.waitForConnection();
+    if (this.connectingPromise) {
+      return this.connectingPromise;
     }
 
-    onStatus('connecting');
+    this.intentionalClose = false;
+    this.setStatus('connecting');
 
-    return new Promise(
-      (resolve, reject) => {
-        this.socket =
-          new WebSocket(
-            DEFAULT_WS_URL
-          );
+    this.connectingPromise = new Promise<void>((resolve, reject) => {
+      const socket = new WebSocket(url);
+      this.socket = socket;
 
-        this.socket.addEventListener(
-          'open',
-          () => {
-            this.statusHandler?.(
-              'connected'
-            );
+      socket.onopen = () => {
+        this.connectingPromise = null;
+        this.setStatus('connected');
+        resolve();
+      };
 
-            resolve();
-          }
-        );
+      socket.onmessage = (event: MessageEvent) => {
+        if (typeof event.data !== 'string') {
+          return;
+        }
 
-        this.socket.addEventListener(
-          'message',
-          (event) => {
-            try {
-              const message =
-                JSON.parse(
-                  event.data
-                ) as ServerMessage;
+        try {
+          const message = JSON.parse(event.data) as ServerMessage;
+          this.messageHandler?.(message);
+        } catch (error) {
+          console.error('Failed to parse Kivo WebSocket message:', error);
+        }
+      };
 
-              this.messageHandler?.(
-                message
-              );
-            } catch {
-              this.messageHandler?.({
-                type: 'error',
-                message:
-                  'Invalid server response.'
-              });
-            }
-          }
-        );
+      socket.onerror = () => {
+        this.setStatus('error');
+      };
 
-        this.socket.addEventListener(
-          'close',
-          () => {
-            this.statusHandler?.(
-              'disconnected'
-            );
+      socket.onclose = () => {
+        const wasConnecting = this.connectingPromise !== null;
 
-            this.socket = null;
-          }
-        );
+        this.connectingPromise = null;
+        this.socket = null;
 
-        this.socket.addEventListener(
-          'error',
-          () => {
-            this.statusHandler?.(
-              'error'
-            );
+        if (this.intentionalClose) {
+          this.setStatus('disconnected');
+          return;
+        }
 
-            reject(
-              new Error(
-                'WebSocket connection failed.'
-              )
-            );
-          }
-        );
-      }
-    );
+        this.setStatus('disconnected');
+
+        if (wasConnecting) {
+          reject(new Error('WebSocket connection failed.'));
+        }
+      };
+    });
+
+    return this.connectingPromise;
   }
 
-  send(
-    message: ClientMessage
-  ): boolean {
-    if (
-      this.socket?.readyState !==
-      WebSocket.OPEN
-    ) {
+  send(message: ClientMessage): boolean {
+    if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
       return false;
     }
 
-    this.socket.send(
-      JSON.stringify(message)
-    );
-
+    this.socket.send(JSON.stringify(message));
     return true;
   }
 
+  isConnected(): boolean {
+    return this.socket?.readyState === WebSocket.OPEN;
+  }
+
   close(): void {
-    this.socket?.close();
+    this.intentionalClose = true;
+    this.connectingPromise = null;
+
+    if (
+      this.socket &&
+      (this.socket.readyState === WebSocket.OPEN ||
+        this.socket.readyState === WebSocket.CONNECTING)
+    ) {
+      this.socket.close(1000, 'Client left');
+    }
 
     this.socket = null;
+    this.setStatus('disconnected');
   }
 
-  isConnected(): boolean {
-    return (
-      this.socket?.readyState ===
-      WebSocket.OPEN
-    );
-  }
-
-  private waitForConnection():
-    Promise<void> {
-    return new Promise(
-      (resolve, reject) => {
-        const check = () => {
-          if (
-            this.socket?.readyState ===
-            WebSocket.OPEN
-          ) {
-            this.statusHandler?.(
-              'connected'
-            );
-
-            resolve();
-
-            return;
-          }
-
-          if (
-            this.socket?.readyState ===
-              WebSocket.CLOSED ||
-            this.socket?.readyState ===
-              WebSocket.CLOSING
-          ) {
-            reject(
-              new Error(
-                'WebSocket connection failed.'
-              )
-            );
-
-            return;
-          }
-
-          setTimeout(check, 100);
-        };
-
-        check();
-      }
-    );
+  private setStatus(status: ConnectionStatus): void {
+    this.statusHandler?.(status);
   }
 }

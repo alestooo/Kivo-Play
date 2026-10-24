@@ -1,3 +1,5 @@
+mod turn_order;
+
 use axum::{
     Json, Router,
     extract::{
@@ -8,21 +10,22 @@ use axum::{
     routing::get,
 };
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, net::SocketAddr, sync::Arc};
+use std::{collections::HashMap, net::SocketAddr, sync::Arc, time::Duration};
 use tokio::sync::{RwLock, mpsc};
 use tracing::{info, warn};
 use uuid::Uuid;
 
+use turn_order::{
+    DICE_PER_PLAYER, DieState, PhysicsDieInput, PhysicsFrameResponse, physics::simulate_roll,
+};
+
 const ROOM_CODE_LETTERS: &[u8] = b"ABCDEFGHJKMNPQRSTUVWXYZ";
-
 const ROOM_CODE_DIGITS: &[u8] = b"23456789";
-
 const ROOM_CODE_LENGTH: usize = 6;
-const TURN_ORDER_DICE: usize = 3;
 const ROOMS_PER_PAGE: usize = 25;
+const PHYSICS_REVEAL_DELAY_MS: u64 = 1050;
 
 type SharedRooms = Arc<RwLock<HashMap<String, Room>>>;
-
 type ClientSender = mpsc::UnboundedSender<ServerMessage>;
 
 #[derive(Clone)]
@@ -45,7 +48,7 @@ struct Player {
     name: String,
     is_host: bool,
     ready: bool,
-    turn_rolls: [Option<u8>; TURN_ORDER_DICE],
+    turn_dice: [DieState; DICE_PER_PLAYER],
     sender: ClientSender,
 }
 
@@ -90,35 +93,28 @@ struct HealthResponse {
 #[serde(tag = "type", rename_all = "snake_case")]
 enum ClientMessage {
     Ping,
-
     CreateRoom {
         player_name: String,
         room_name: String,
         max_players: u8,
         visibility: String,
     },
-
     JoinRoom {
         player_name: String,
         room_code: String,
     },
-
     JoinPublicRoom {
         player_name: String,
         room_id: Uuid,
     },
-
     ListRooms {
         page: usize,
         search: String,
     },
-
     SetReady {
         ready: bool,
     },
-
     StartGame,
-
     RollTurnDie {
         die_index: usize,
     },
@@ -128,7 +124,6 @@ enum ClientMessage {
 #[serde(tag = "type", rename_all = "snake_case")]
 enum ServerMessage {
     Pong,
-
     RoomCreated {
         room_code: String,
         room_name: String,
@@ -139,7 +134,6 @@ enum ServerMessage {
         state: String,
         players: Vec<PlayerResponse>,
     },
-
     RoomJoined {
         room_code: String,
         room_name: String,
@@ -150,7 +144,6 @@ enum ServerMessage {
         state: String,
         players: Vec<PlayerResponse>,
     },
-
     RoomState {
         room_code: String,
         room_name: String,
@@ -160,28 +153,26 @@ enum ServerMessage {
         state: String,
         players: Vec<PlayerResponse>,
     },
-
     RoomDirectory {
         rooms: Vec<RoomSummary>,
         page: usize,
         total_pages: usize,
         total_rooms: usize,
     },
-
     TurnOrderStarted {
         room_code: String,
         players: Vec<TurnOrderPlayerResponse>,
     },
-
+    TurnOrderPhysics {
+        frames: Vec<PhysicsFrameResponse>,
+    },
     TurnOrderState {
         players: Vec<TurnOrderPlayerResponse>,
         all_complete: bool,
     },
-
     TurnOrderFinished {
         ranking: Vec<TurnOrderRankingEntry>,
     },
-
     Error {
         message: String,
     },
@@ -211,8 +202,10 @@ struct TurnOrderPlayerResponse {
     id: Uuid,
     name: String,
     rolls: Vec<Option<u8>>,
+    rolled: Vec<bool>,
     total: u16,
     complete: bool,
+    roll_count: usize,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -265,7 +258,6 @@ async fn handle_socket(mut socket: WebSocket, state: AppState) {
     let (outgoing_tx, mut outgoing_rx) = mpsc::unbounded_channel::<ServerMessage>();
 
     let mut current_room: Option<String> = None;
-
     let mut current_player: Option<Uuid> = None;
 
     loop {
@@ -273,33 +265,16 @@ async fn handle_socket(mut socket: WebSocket, state: AppState) {
             incoming = socket.recv() => {
                 match incoming {
                     Some(Ok(Message::Text(text))) => {
-                        let parsed =
-                            serde_json::from_str::<ClientMessage>(&text);
+                        let parsed = serde_json::from_str::<ClientMessage>(&text);
 
                         match parsed {
                             Ok(ClientMessage::Ping) => {
-                                let _ =
-                                    outgoing_tx.send(
-                                        ServerMessage::Pong
-                                    );
+                                let _ = outgoing_tx.send(ServerMessage::Pong);
                             }
 
-                            Ok(ClientMessage::ListRooms {
-                                page,
-                                search,
-                            }) => {
-                                let message =
-                                    list_rooms(
-                                        &state,
-                                        page,
-                                        search,
-                                    )
-                                    .await;
-
-                                let _ =
-                                    outgoing_tx.send(
-                                        message
-                                    );
+                            Ok(ClientMessage::ListRooms { page, search }) => {
+                                let message = list_rooms(&state, page, search).await;
+                                let _ = outgoing_tx.send(message);
                             }
 
                             Ok(ClientMessage::CreateRoom {
@@ -309,13 +284,9 @@ async fn handle_socket(mut socket: WebSocket, state: AppState) {
                                 visibility,
                             }) => {
                                 if current_room.is_some() {
-                                    let _ =
-                                        outgoing_tx.send(
-                                            server_error(
-                                                "You are already inside a room"
-                                            )
-                                        );
-
+                                    let _ = outgoing_tx.send(server_error(
+                                        "You are already inside a room"
+                                    ));
                                     continue;
                                 }
 
@@ -326,41 +297,16 @@ async fn handle_socket(mut socket: WebSocket, state: AppState) {
                                     room_name,
                                     max_players,
                                     visibility,
-                                )
-                                .await
-                                {
-                                    Ok((
-                                        room_code,
-                                        player_id,
-                                        response,
-                                    )) => {
-                                        current_room =
-                                            Some(
-                                                room_code.clone()
-                                            );
+                                ).await {
+                                    Ok((room_code, player_id, response)) => {
+                                        current_room = Some(room_code.clone());
+                                        current_player = Some(player_id);
 
-                                        current_player =
-                                            Some(
-                                                player_id
-                                            );
-
-                                        let _ =
-                                            outgoing_tx.send(
-                                                response
-                                            );
-
-                                        broadcast_room_state(
-                                            &state,
-                                            &room_code,
-                                        )
-                                        .await;
+                                        let _ = outgoing_tx.send(response);
+                                        broadcast_room_state(&state, &room_code).await;
                                     }
-
                                     Err(error) => {
-                                        let _ =
-                                            outgoing_tx.send(
-                                                error
-                                            );
+                                        let _ = outgoing_tx.send(error);
                                     }
                                 }
                             }
@@ -370,13 +316,9 @@ async fn handle_socket(mut socket: WebSocket, state: AppState) {
                                 room_code,
                             }) => {
                                 if current_room.is_some() {
-                                    let _ =
-                                        outgoing_tx.send(
-                                            server_error(
-                                                "You are already inside a room"
-                                            )
-                                        );
-
+                                    let _ = outgoing_tx.send(server_error(
+                                        "You are already inside a room"
+                                    ));
                                     continue;
                                 }
 
@@ -385,41 +327,16 @@ async fn handle_socket(mut socket: WebSocket, state: AppState) {
                                     outgoing_tx.clone(),
                                     player_name,
                                     room_code,
-                                )
-                                .await
-                                {
-                                    Ok((
-                                        room_code,
-                                        player_id,
-                                        response,
-                                    )) => {
-                                        current_room =
-                                            Some(
-                                                room_code.clone()
-                                            );
+                                ).await {
+                                    Ok((room_code, player_id, response)) => {
+                                        current_room = Some(room_code.clone());
+                                        current_player = Some(player_id);
 
-                                        current_player =
-                                            Some(
-                                                player_id
-                                            );
-
-                                        let _ =
-                                            outgoing_tx.send(
-                                                response
-                                            );
-
-                                        broadcast_room_state(
-                                            &state,
-                                            &room_code,
-                                        )
-                                        .await;
+                                        let _ = outgoing_tx.send(response);
+                                        broadcast_room_state(&state, &room_code).await;
                                     }
-
                                     Err(error) => {
-                                        let _ =
-                                            outgoing_tx.send(
-                                                error
-                                            );
+                                        let _ = outgoing_tx.send(error);
                                     }
                                 }
                             }
@@ -429,13 +346,9 @@ async fn handle_socket(mut socket: WebSocket, state: AppState) {
                                 room_id,
                             }) => {
                                 if current_room.is_some() {
-                                    let _ =
-                                        outgoing_tx.send(
-                                            server_error(
-                                                "You are already inside a room"
-                                            )
-                                        );
-
+                                    let _ = outgoing_tx.send(server_error(
+                                        "You are already inside a room"
+                                    ));
                                     continue;
                                 }
 
@@ -444,219 +357,115 @@ async fn handle_socket(mut socket: WebSocket, state: AppState) {
                                     outgoing_tx.clone(),
                                     player_name,
                                     room_id,
-                                )
-                                .await
-                                {
-                                    Ok((
-                                        room_code,
-                                        player_id,
-                                        response,
-                                    )) => {
-                                        current_room =
-                                            Some(
-                                                room_code.clone()
-                                            );
+                                ).await {
+                                    Ok((room_code, player_id, response)) => {
+                                        current_room = Some(room_code.clone());
+                                        current_player = Some(player_id);
 
-                                        current_player =
-                                            Some(
-                                                player_id
-                                            );
-
-                                        let _ =
-                                            outgoing_tx.send(
-                                                response
-                                            );
-
-                                        broadcast_room_state(
-                                            &state,
-                                            &room_code,
-                                        )
-                                        .await;
+                                        let _ = outgoing_tx.send(response);
+                                        broadcast_room_state(&state, &room_code).await;
                                     }
-
                                     Err(error) => {
-                                        let _ =
-                                            outgoing_tx.send(
-                                                error
-                                            );
+                                        let _ = outgoing_tx.send(error);
                                     }
                                 }
                             }
 
-                            Ok(ClientMessage::SetReady {
-                                ready,
-                            }) => {
-                                let (
-                                    Some(room_code),
-                                    Some(player_id),
-                                ) = (
-                                    &current_room,
-                                    current_player,
-                                )
+                            Ok(ClientMessage::SetReady { ready }) => {
+                                let (Some(room_code), Some(player_id)) =
+                                    (&current_room, current_player)
                                 else {
-                                    let _ =
-                                        outgoing_tx.send(
-                                            server_error(
-                                                "You are not inside a room"
-                                            )
-                                        );
-
+                                    let _ = outgoing_tx.send(server_error(
+                                        "You are not inside a room"
+                                    ));
                                     continue;
                                 };
 
-                                if let Err(error) =
-                                    set_player_ready(
-                                        &state,
-                                        room_code,
-                                        player_id,
-                                        ready,
-                                    )
-                                    .await
-                                {
-                                    let _ =
-                                        outgoing_tx.send(
-                                            error
-                                        );
+                                if let Err(error) = set_player_ready(
+                                    &state,
+                                    room_code,
+                                    player_id,
+                                    ready,
+                                ).await {
+                                    let _ = outgoing_tx.send(error);
                                 }
                             }
 
                             Ok(ClientMessage::StartGame) => {
-                                let (
-                                    Some(room_code),
-                                    Some(player_id),
-                                ) = (
-                                    &current_room,
-                                    current_player,
-                                )
+                                let (Some(room_code), Some(player_id)) =
+                                    (&current_room, current_player)
                                 else {
-                                    let _ =
-                                        outgoing_tx.send(
-                                            server_error(
-                                                "You are not inside a room"
-                                            )
-                                        );
-
+                                    let _ = outgoing_tx.send(server_error(
+                                        "You are not inside a room"
+                                    ));
                                     continue;
                                 };
 
-                                if let Err(error) =
-                                    start_game(
-                                        &state,
-                                        room_code,
-                                        player_id,
-                                    )
-                                    .await
-                                {
-                                    let _ =
-                                        outgoing_tx.send(
-                                            error
-                                        );
+                                if let Err(error) = start_game(
+                                    &state,
+                                    room_code,
+                                    player_id,
+                                ).await {
+                                    let _ = outgoing_tx.send(error);
                                 }
                             }
 
-                            Ok(ClientMessage::RollTurnDie {
-                                die_index,
-                            }) => {
-                                let (
-                                    Some(room_code),
-                                    Some(player_id),
-                                ) = (
-                                    &current_room,
-                                    current_player,
-                                )
+                            Ok(ClientMessage::RollTurnDie { die_index }) => {
+                                let (Some(room_code), Some(player_id)) =
+                                    (&current_room, current_player)
                                 else {
-                                    let _ =
-                                        outgoing_tx.send(
-                                            server_error(
-                                                "You are not inside a room"
-                                            )
-                                        );
-
+                                    let _ = outgoing_tx.send(server_error(
+                                        "You are not inside a room"
+                                    ));
                                     continue;
                                 };
 
-                                if let Err(error) =
-                                    roll_turn_die(
-                                        &state,
-                                        room_code,
-                                        player_id,
-                                        die_index,
-                                    )
-                                    .await
-                                {
-                                    let _ =
-                                        outgoing_tx.send(
-                                            error
-                                        );
+                                if let Err(error) = roll_turn_die(
+                                    &state,
+                                    room_code,
+                                    player_id,
+                                    die_index,
+                                ).await {
+                                    let _ = outgoing_tx.send(error);
                                 }
                             }
 
                             Err(error) => {
-                                warn!(
-                                    "Invalid WebSocket message: {}",
-                                    error
-                                );
-
-                                let _ =
-                                    outgoing_tx.send(
-                                        server_error(
-                                            "Invalid message"
-                                        )
-                                    );
+                                warn!("Invalid WebSocket message: {}", error);
+                                let _ = outgoing_tx.send(server_error(
+                                    "Invalid message"
+                                ));
                             }
                         }
                     }
 
-                    Some(Ok(Message::Close(_))) => {
-                        break;
-                    }
-
+                    Some(Ok(Message::Close(_))) => break,
                     Some(Ok(_)) => {}
 
                     Some(Err(error)) => {
-                        warn!(
-                            "WebSocket error: {}",
-                            error
-                        );
-
+                        warn!("WebSocket error: {}", error);
                         break;
                     }
 
-                    None => {
-                        break;
-                    }
+                    None => break,
                 }
             }
 
             outgoing = outgoing_rx.recv() => {
-                let Some(message) =
-                    outgoing
-                else {
+                let Some(message) = outgoing else {
                     break;
                 };
 
-                let json =
-                    match serde_json::to_string(
-                        &message
-                    ) {
-                        Ok(json) => json,
-
-                        Err(error) => {
-                            warn!(
-                                "Failed to serialize server message: {}",
-                                error
-                            );
-
-                            continue;
-                        }
-                    };
+                let json = match serde_json::to_string(&message) {
+                    Ok(json) => json,
+                    Err(error) => {
+                        warn!("Failed to serialize server message: {}", error);
+                        continue;
+                    }
+                };
 
                 if socket
-                    .send(
-                        Message::Text(
-                            json.into()
-                        )
-                    )
+                    .send(Message::Text(json.into()))
                     .await
                     .is_err()
                 {
@@ -682,7 +491,6 @@ async fn create_room(
     visibility: String,
 ) -> Result<(String, Uuid, ServerMessage), ServerMessage> {
     let player_name = validate_player_name(player_name)?;
-
     let room_name = validate_room_name(room_name)?;
 
     if !(1..=4).contains(&max_players) {
@@ -691,16 +499,11 @@ async fn create_room(
 
     let visibility = match visibility.as_str() {
         "public" => RoomVisibility::Public,
-
         "private" => RoomVisibility::Private,
-
-        _ => {
-            return Err(server_error("Invalid room visibility"));
-        }
+        _ => return Err(server_error("Invalid room visibility")),
     };
 
     let player_id = Uuid::new_v4();
-
     let room_id = Uuid::new_v4();
 
     let player = Player {
@@ -708,7 +511,7 @@ async fn create_room(
         name: player_name,
         is_host: true,
         ready: false,
-        turn_rolls: [None, None, None],
+        turn_dice: [DieState::default(); DICE_PER_PLAYER],
         sender,
     };
 
@@ -724,35 +527,22 @@ async fn create_room(
 
     let room = Room {
         id: room_id,
-
         name: room_name.clone(),
-
         host_id: player_id,
-
         max_players,
-
         visibility,
-
         players: vec![player],
-
         state: RoomState::Lobby,
     };
 
     let response = ServerMessage::RoomCreated {
         room_code: room_code.clone(),
-
         room_name,
-
         player_id,
-
         host_id: player_id,
-
         max_players,
-
         visibility: visibility.as_str().to_string(),
-
         state: RoomState::Lobby.as_str().to_string(),
-
         players: room_players_response(&room),
     };
 
@@ -850,33 +640,21 @@ async fn join_room_internal(
 
     room.players.push(Player {
         id: player_id,
-
         name: player_name,
-
         is_host: false,
-
         ready: false,
-
-        turn_rolls: [None, None, None],
-
+        turn_dice: [DieState::default(); DICE_PER_PLAYER],
         sender,
     });
 
     let response = ServerMessage::RoomJoined {
         room_code: room_code.clone(),
-
         room_name: room.name.clone(),
-
         player_id,
-
         host_id: room.host_id,
-
         max_players: room.max_players,
-
         visibility: room.visibility.as_str().to_string(),
-
         state: room.state.as_str().to_string(),
-
         players: room_players_response(room),
     };
 
@@ -902,17 +680,11 @@ async fn list_rooms(state: &AppState, requested_page: usize, search: String) -> 
 
             RoomSummary {
                 room_id: room.id,
-
                 room_name: room.name.clone(),
-
                 host_name,
-
                 visibility: room.visibility.as_str().to_string(),
-
                 player_count: room.players.len(),
-
                 max_players: room.max_players,
-
                 joinable: room.players.len() < usize::from(room.max_players),
             }
         })
@@ -984,7 +756,7 @@ async fn start_game(
     room_code: &str,
     player_id: Uuid,
 ) -> Result<(), ServerMessage> {
-    let (senders, players) = {
+    let messages = {
         let mut rooms = state.rooms.write().await;
 
         let room = rooms
@@ -1010,31 +782,28 @@ async fn start_game(
         room.state = RoomState::TurnOrder;
 
         for player in &mut room.players {
-            player.turn_rolls = [None, None, None];
+            player.turn_dice = [DieState::default(); DICE_PER_PLAYER];
         }
 
-        let senders = room
-            .players
+        room.players
             .iter()
-            .map(|player| player.sender.clone())
-            .collect::<Vec<_>>();
-
-        let players = turn_order_players_response(room);
-
-        (senders, players)
+            .map(|viewer| {
+                (
+                    viewer.sender.clone(),
+                    ServerMessage::TurnOrderStarted {
+                        room_code: room_code.to_string(),
+                        players: turn_order_players_response_for(room, viewer.id),
+                    },
+                )
+            })
+            .collect::<Vec<_>>()
     };
 
-    let message = ServerMessage::TurnOrderStarted {
-        room_code: room_code.to_string(),
-
-        players,
-    };
-
-    for sender in senders {
-        let _ = sender.send(message.clone());
+    for (sender, message) in messages {
+        let _ = sender.send(message);
     }
 
-    info!("Game started in room {}", room_code);
+    info!("Turn-order arena started in room {}", room_code);
 
     Ok(())
 }
@@ -1045,11 +814,11 @@ async fn roll_turn_die(
     player_id: Uuid,
     die_index: usize,
 ) -> Result<(), ServerMessage> {
-    if die_index >= TURN_ORDER_DICE {
+    if die_index >= DICE_PER_PLAYER {
         return Err(server_error("Invalid die index"));
     }
 
-    {
+    let (frames, senders) = {
         let mut rooms = state.rooms.write().await;
 
         let room = rooms
@@ -1060,18 +829,66 @@ async fn roll_turn_die(
             return Err(server_error("Turn-order phase is not active"));
         }
 
-        let player = room
+        let requesting_player = room
             .players
-            .iter_mut()
+            .iter()
             .find(|player| player.id == player_id)
             .ok_or_else(|| server_error("Player not found"))?;
 
-        if player.turn_rolls[die_index].is_some() {
+        if requesting_player.turn_dice[die_index].value.is_some() {
             return Err(server_error("This die has already been rolled"));
         }
 
-        player.turn_rolls[die_index] = Some(rand::random_range(1..=6));
+        let existing_dice = room
+            .players
+            .iter()
+            .flat_map(|player| {
+                player
+                    .turn_dice
+                    .iter()
+                    .enumerate()
+                    .filter_map(move |(index, die)| {
+                        if die.value.is_some() {
+                            Some(PhysicsDieInput {
+                                owner_id: player.id,
+                                die_index: index,
+                                state: *die,
+                            })
+                        } else {
+                            None
+                        }
+                    })
+            })
+            .collect::<Vec<_>>();
+
+        let simulation = simulate_roll(&existing_dice, player_id, die_index);
+
+        for simulated_die in &simulation.dice {
+            if let Some(player) = room
+                .players
+                .iter_mut()
+                .find(|player| player.id == simulated_die.owner_id)
+            {
+                player.turn_dice[simulated_die.die_index] = simulated_die.state;
+            }
+        }
+
+        let senders = room
+            .players
+            .iter()
+            .map(|player| player.sender.clone())
+            .collect::<Vec<_>>();
+
+        (simulation.frames, senders)
+    };
+
+    let message = ServerMessage::TurnOrderPhysics { frames };
+
+    for sender in &senders {
+        let _ = sender.send(message.clone());
     }
+
+    tokio::time::sleep(Duration::from_millis(PHYSICS_REVEAL_DELAY_MS)).await;
 
     broadcast_turn_order_state(state, room_code).await;
 
@@ -1081,41 +898,39 @@ async fn roll_turn_die(
 }
 
 async fn broadcast_turn_order_state(state: &AppState, room_code: &str) {
-    let (senders, players, all_complete) = {
+    let messages = {
         let rooms = state.rooms.read().await;
 
         let Some(room) = rooms.get(room_code) else {
             return;
         };
 
-        let senders = room
-            .players
-            .iter()
-            .map(|player| player.sender.clone())
-            .collect::<Vec<_>>();
-
-        let players = turn_order_players_response(room);
-
         let all_complete = room
             .players
             .iter()
-            .all(|player| player.turn_rolls.iter().all(Option::is_some));
+            .all(|player| player.turn_dice.iter().all(|die| die.value.is_some()));
 
-        (senders, players, all_complete)
+        room.players
+            .iter()
+            .map(|viewer| {
+                (
+                    viewer.sender.clone(),
+                    ServerMessage::TurnOrderState {
+                        players: turn_order_players_response_for(room, viewer.id),
+                        all_complete,
+                    },
+                )
+            })
+            .collect::<Vec<_>>()
     };
 
-    let message = ServerMessage::TurnOrderState {
-        players,
-        all_complete,
-    };
-
-    for sender in senders {
-        let _ = sender.send(message.clone());
+    for (sender, message) in messages {
+        let _ = sender.send(message);
     }
 }
 
 async fn finish_turn_order_if_ready(state: &AppState, room_code: &str) {
-    let (senders, ranking) = {
+    let result = {
         let mut rooms = state.rooms.write().await;
 
         let Some(room) = rooms.get_mut(room_code) else {
@@ -1129,7 +944,7 @@ async fn finish_turn_order_if_ready(state: &AppState, room_code: &str) {
         let all_complete = room
             .players
             .iter()
-            .all(|player| player.turn_rolls.iter().all(Option::is_some));
+            .all(|player| player.turn_dice.iter().all(|die| die.value.is_some()));
 
         if !all_complete {
             return;
@@ -1162,13 +977,9 @@ async fn finish_turn_order_if_ready(state: &AppState, room_code: &str) {
 
             ranking.push(TurnOrderRankingEntry {
                 player_id: *player_id,
-
                 name: name.clone(),
-
                 total: *total,
-
                 position,
-
                 tied,
             });
         }
@@ -1179,7 +990,11 @@ async fn finish_turn_order_if_ready(state: &AppState, room_code: &str) {
             .map(|player| player.sender.clone())
             .collect::<Vec<_>>();
 
-        (senders, ranking)
+        Some((senders, ranking))
+    };
+
+    let Some((senders, ranking)) = result else {
+        return;
     };
 
     let message = ServerMessage::TurnOrderFinished { ranking };
@@ -1205,17 +1020,11 @@ async fn broadcast_room_state(state: &AppState, room_code: &str) {
 
         let message = ServerMessage::RoomState {
             room_code: room_code.to_string(),
-
             room_name: room.name.clone(),
-
             host_id: room.host_id,
-
             max_players: room.max_players,
-
             visibility: room.visibility.as_str().to_string(),
-
             state: room.state.as_str().to_string(),
-
             players: room_players_response(room),
         };
 
@@ -1229,8 +1038,7 @@ async fn broadcast_room_state(state: &AppState, room_code: &str) {
 
 async fn remove_player(state: &AppState, room_code: &str, player_id: Uuid) {
     let mut delete_room = false;
-
-    let mut check_turn_order = false;
+    let mut turn_order = false;
 
     {
         let mut rooms = state.rooms.write().await;
@@ -1248,7 +1056,6 @@ async fn remove_player(state: &AppState, room_code: &str, player_id: Uuid) {
         } else {
             if was_host {
                 let new_host = room.players[0].id;
-
                 room.host_id = new_host;
 
                 for player in &mut room.players {
@@ -1256,19 +1063,17 @@ async fn remove_player(state: &AppState, room_code: &str, player_id: Uuid) {
                 }
             }
 
-            check_turn_order = matches!(room.state, RoomState::TurnOrder);
+            turn_order = matches!(room.state, RoomState::TurnOrder);
         }
     }
 
     if delete_room {
         let mut rooms = state.rooms.write().await;
-
         rooms.remove(room_code);
-
         return;
     }
 
-    if check_turn_order {
+    if turn_order {
         broadcast_turn_order_state(state, room_code).await;
 
         finish_turn_order_if_ready(state, room_code).await;
@@ -1293,7 +1098,6 @@ fn validate_player_name(player_name: String) -> Result<String, ServerMessage> {
 
 fn validate_room_name(room_name: String) -> Result<String, ServerMessage> {
     let room_name = room_name.trim().to_string();
-
     let length = room_name.chars().count();
 
     if length < 3 {
@@ -1312,39 +1116,52 @@ fn room_players_response(room: &Room) -> Vec<PlayerResponse> {
         .iter()
         .map(|player| PlayerResponse {
             id: player.id,
-
             name: player.name.clone(),
-
             is_host: player.is_host,
-
             ready: player.ready,
         })
         .collect()
 }
 
-fn turn_order_players_response(room: &Room) -> Vec<TurnOrderPlayerResponse> {
+fn turn_order_players_response_for(room: &Room, viewer_id: Uuid) -> Vec<TurnOrderPlayerResponse> {
     room.players
         .iter()
-        .map(|player| TurnOrderPlayerResponse {
-            id: player.id,
+        .map(|player| {
+            let rolled = player
+                .turn_dice
+                .iter()
+                .map(|die| die.value.is_some())
+                .collect::<Vec<_>>();
 
-            name: player.name.clone(),
+            let roll_count = rolled.iter().filter(|value| **value).count();
 
-            rolls: player.turn_rolls.to_vec(),
+            let is_owner = player.id == viewer_id;
 
-            total: turn_roll_total(player),
+            let rolls = if is_owner {
+                player.turn_dice.iter().map(|die| die.value).collect()
+            } else {
+                vec![None; DICE_PER_PLAYER]
+            };
 
-            complete: player.turn_rolls.iter().all(Option::is_some),
+            TurnOrderPlayerResponse {
+                id: player.id,
+                name: player.name.clone(),
+                rolls,
+                rolled,
+                total: if is_owner { turn_roll_total(player) } else { 0 },
+                complete: roll_count == DICE_PER_PLAYER,
+                roll_count,
+            }
         })
         .collect()
 }
 
 fn turn_roll_total(player: &Player) -> u16 {
     player
-        .turn_rolls
+        .turn_dice
         .iter()
-        .flatten()
-        .map(|value| u16::from(*value))
+        .filter_map(|die| die.value)
+        .map(u16::from)
         .sum()
 }
 

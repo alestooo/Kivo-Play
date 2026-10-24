@@ -5,11 +5,11 @@
   import TurnOrderCountdown
     from '../turn-order/TurnOrderCountdown.svelte';
 
-  import TurnOrderDice
-    from '../turn-order/TurnOrderDice.svelte';
+  import TurnOrderGame
+    from '../turn-order/TurnOrderGame.svelte';
 
-  import TurnOrderRanking
-    from '../turn-order/TurnOrderRanking.svelte';
+  import TurnOrderResult
+    from '../turn-order/TurnOrderResult.svelte';
 
   import {
     KivoWebSocket
@@ -17,6 +17,7 @@
 
   import type {
     ConnectionStatus,
+    PhysicsFrame,
     Player,
     RankingEntry,
     RoomStatePayload,
@@ -98,6 +99,9 @@
   let ranking:
     RankingEntry[] = [];
 
+  let physicsFrames:
+    PhysicsFrame[] = [];
+
   let countdownText = '';
 
   let rollingDice:
@@ -173,6 +177,8 @@
 
         ranking = [];
 
+        physicsFrames = [];
+
         rollingDice =
           new Set<number>();
 
@@ -180,6 +186,12 @@
           'countdown';
 
         void runCountdown();
+
+        return;
+
+      case 'turn_order_physics':
+        physicsFrames =
+          message.frames;
 
         return;
 
@@ -621,17 +633,14 @@
     if (
       me.rolls[index] !==
         null ||
-      rollingDice.has(
-        index
-      )
+      me.rolled[index] ||
+      rollingDice.size > 0
     ) {
       return;
     }
 
     const next =
-      new Set<number>(
-        rollingDice
-      );
+      new Set<number>();
 
     next.add(index);
 
@@ -648,15 +657,8 @@
       });
 
     if (!sent) {
-      const rollback =
-        new Set<number>(
-          rollingDice
-        );
-
-      rollback.delete(index);
-
       rollingDice =
-        rollback;
+        new Set<number>();
 
       errorMessage =
         'Connection lost.';
@@ -679,31 +681,21 @@
       return;
     }
 
-    const next =
-      new Set<number>(
+    const activeIndex =
+      Array.from(
         rollingDice
-      );
+      )[0];
 
-    me.rolls.forEach(
-      (
-        value:
-          number | null,
-
-        index:
-          number
-      ) => {
-        if (
-          value !== null
-        ) {
-          next.delete(
-            index
-          );
-        }
-      }
-    );
-
-    rollingDice =
-      next;
+    if (
+      activeIndex !==
+        undefined &&
+      me.rolls[
+        activeIndex
+      ] !== null
+    ) {
+      rollingDice =
+        new Set<number>();
+    }
   }
 
   async function runCountdown():
@@ -779,6 +771,8 @@
     turnPlayers = [];
 
     ranking = [];
+
+    physicsFrames = [];
 
     rooms = [];
 
@@ -1487,16 +1481,16 @@
   />
 
 {:else if screen === 'dice'}
-  <TurnOrderDice
+  <TurnOrderGame
     {playerId}
     players={turnPlayers}
-    {rollingDice}
-    onRollDie={rollDie}
+    frames={physicsFrames}
+    onRoll={rollDie}
     onLeave={leaveRoom}
   />
 
 {:else if screen === 'ranking'}
-  <TurnOrderRanking
+  <TurnOrderResult
     {playerId}
     {ranking}
     onLeave={leaveRoom}

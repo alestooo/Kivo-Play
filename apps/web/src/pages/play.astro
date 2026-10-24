@@ -1,86 +1,112 @@
 ---
-import BaseLayout
-  from '../layouts/BaseLayout.astro';
-
-import RoomLobby
-  from '../components/lobby/RoomLobby.svelte';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import RoomLobby from '../components/lobby/RoomLobby.svelte';
 ---
 
 <BaseLayout
-  title="Play — Kivo Play"
-  description="Create or join a multiplayer room in Kivo Play."
+  title="Multiplayer — Kivo Play"
+  description="Create or join a Kivo Play multiplayer room."
 >
-  <main class="play-page">
-    <div class="play-heading">
-      <span>
-        KIVO PLAY · ALPHA
-      </span>
+  <main class="multiplayer-page">
+    <header class="multiplayer-header">
+      <span>KIVO PLAY · ALPHA</span>
 
-      <h1>
-        Multiplayer
-      </h1>
+      <h1>Multiplayer</h1>
 
       <p>
-        Create a room, invite your
-        friends and play together.
+        Create a room, invite your friends and play together.
       </p>
-    </div>
+    </header>
 
     <RoomLobby client:load />
   </main>
 </BaseLayout>
 
 <style>
-  .play-page {
-    width:
-      min(
-        1100px,
-        calc(100% - 2rem)
-      );
-
-    min-height:
-      calc(100vh - 180px);
+  .multiplayer-page {
+    width: min(
+      1180px,
+      calc(100% - 2rem)
+    );
 
     margin: 0 auto;
 
     padding:
-      5rem 0 7rem;
+      0.8rem
+      0
+      1.25rem;
   }
 
-  .play-heading {
-    margin-bottom: 2rem;
+  .multiplayer-header {
+    margin-bottom: 0.75rem;
 
     text-align: center;
   }
 
-  .play-heading > span {
+  .multiplayer-header > span {
     color: #c084fc;
 
-    font-size: 0.7rem;
-    font-weight: 900;
+    font-size: 0.58rem;
 
-    letter-spacing: 0.16em;
+    font-weight: 950;
+
+    letter-spacing:
+      0.14em;
   }
 
-  .play-heading h1 {
+  .multiplayer-header h1 {
     margin:
-      0.5rem 0;
+      0.18rem
+      0;
 
     font-size:
       clamp(
-        2.5rem,
-        6vw,
-        4rem
+        2rem,
+        4vw,
+        3.25rem
       );
 
     letter-spacing:
-      -0.045em;
+      -0.055em;
   }
 
-  .play-heading p {
-    margin: 0;
+  .multiplayer-header p {
+    margin:
+      0.15rem
+      0
+      0;
 
     color:
-      rgba(255, 255, 255, 0.5);
+      rgba(
+        255,
+        255,
+        255,
+        0.48
+      );
+
+    font-size:
+      0.78rem;
+  }
+
+  @media (
+    max-height: 780px
+  )
+  and (
+    min-width: 761px
+  ) {
+    .multiplayer-page {
+      padding-top:
+        0.45rem;
+    }
+
+    .multiplayer-header {
+      margin-bottom:
+        0.45rem;
+    }
+
+    .multiplayer-header h1 {
+      font-size:
+        2.25rem;
+    }
   }
 </style>

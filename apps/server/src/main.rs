@@ -449,7 +449,11 @@ async fn main() {
         .route("/ws", get(websocket_handler))
         .with_state(state);
 
-    let address = SocketAddr::from(([127, 0, 0, 1], 3000));
+    let port = std::env::var("PORT").unwrap_or_else(|_| "3000".to_string());
+
+    let port = port.parse::<u16>().expect("PORT must be a valid number");
+
+    let address = SocketAddr::from(([0, 0, 0, 0], port));
 
     let listener = tokio::net::TcpListener::bind(address)
         .await

@@ -4,117 +4,208 @@ import type {
   ServerMessage
 } from './messages';
 
-type MessageHandler = (message: ServerMessage) => void;
-type StatusHandler = (status: ConnectionStatus) => void;
+const LOCAL_WS_URL =
+  'ws://127.0.0.1:3000/ws';
 
-const DEFAULT_URL = 'ws://127.0.0.1:3000/ws';
+const PRODUCTION_WS_URL =
+  'wss://kivo-play.onrender.com/ws';
 
-export class KivoWebSocket {
-  private socket: WebSocket | null = null;
-  private connectingPromise: Promise<void> | null = null;
-  private messageHandler: MessageHandler | null = null;
-  private statusHandler: StatusHandler | null = null;
-  private intentionalClose = false;
+const DEFAULT_URL =
+  import.meta.env.DEV
+    ? LOCAL_WS_URL
+    : (
+        import.meta.env.PUBLIC_WS_URL ??
+        PRODUCTION_WS_URL
+      );
+
+export class GameWebSocket {
+  private socket:
+    WebSocket | null =
+      null;
+
+  private onMessage:
+    (
+      message:
+        ServerMessage
+    ) => void =
+      () => {};
+
+  private onStatus:
+    (
+      status:
+        ConnectionStatus
+    ) => void =
+      () => {};
 
   connect(
-    onMessage: MessageHandler,
-    onStatus: StatusHandler,
-    url: string = DEFAULT_URL
+    onMessage:
+      (
+        message:
+          ServerMessage
+      ) => void,
+
+    onStatus:
+      (
+        status:
+          ConnectionStatus
+      ) => void,
+
+    url:
+      string =
+        DEFAULT_URL
   ): Promise<void> {
-    this.messageHandler = onMessage;
-    this.statusHandler = onStatus;
+    this.onMessage =
+      onMessage;
 
-    if (this.socket?.readyState === WebSocket.OPEN) {
-      this.setStatus('connected');
-      return Promise.resolve();
-    }
-
-    if (this.connectingPromise) {
-      return this.connectingPromise;
-    }
-
-    this.intentionalClose = false;
-    this.setStatus('connecting');
-
-    this.connectingPromise = new Promise<void>((resolve, reject) => {
-      const socket = new WebSocket(url);
-      this.socket = socket;
-
-      socket.onopen = () => {
-        this.connectingPromise = null;
-        this.setStatus('connected');
-        resolve();
-      };
-
-      socket.onmessage = (event: MessageEvent) => {
-        if (typeof event.data !== 'string') {
-          return;
-        }
-
-        try {
-          const message = JSON.parse(event.data) as ServerMessage;
-          this.messageHandler?.(message);
-        } catch (error) {
-          console.error('Failed to parse Kivo WebSocket message:', error);
-        }
-      };
-
-      socket.onerror = () => {
-        this.setStatus('error');
-      };
-
-      socket.onclose = () => {
-        const wasConnecting = this.connectingPromise !== null;
-
-        this.connectingPromise = null;
-        this.socket = null;
-
-        if (this.intentionalClose) {
-          this.setStatus('disconnected');
-          return;
-        }
-
-        this.setStatus('disconnected');
-
-        if (wasConnecting) {
-          reject(new Error('WebSocket connection failed.'));
-        }
-      };
-    });
-
-    return this.connectingPromise;
-  }
-
-  send(message: ClientMessage): boolean {
-    if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
-      return false;
-    }
-
-    this.socket.send(JSON.stringify(message));
-    return true;
-  }
-
-  isConnected(): boolean {
-    return this.socket?.readyState === WebSocket.OPEN;
-  }
-
-  close(): void {
-    this.intentionalClose = true;
-    this.connectingPromise = null;
+    this.onStatus =
+      onStatus;
 
     if (
       this.socket &&
-      (this.socket.readyState === WebSocket.OPEN ||
-        this.socket.readyState === WebSocket.CONNECTING)
+      (
+        this.socket.readyState ===
+          WebSocket.OPEN ||
+        this.socket.readyState ===
+          WebSocket.CONNECTING
+      )
     ) {
-      this.socket.close(1000, 'Client left');
+      return Promise.resolve();
     }
 
-    this.socket = null;
-    this.setStatus('disconnected');
+    this.onStatus(
+      'connecting'
+    );
+
+    return new Promise(
+      (
+        resolve,
+        reject
+      ) => {
+        try {
+          this.socket =
+            new WebSocket(
+              url
+            );
+
+          this.socket.onopen =
+            () => {
+              this.onStatus(
+                'connected'
+              );
+
+              resolve();
+            };
+
+          this.socket.onmessage =
+            (
+              event
+            ) => {
+              try {
+                const message =
+                  JSON.parse(
+                    event.data
+                  ) as
+                    ServerMessage;
+
+                this.onMessage(
+                  message
+                );
+              } catch (
+                error
+              ) {
+                console.error(
+                  'Invalid WebSocket message:',
+                  error
+                );
+              }
+            };
+
+          this.socket.onerror =
+            (
+              event
+            ) => {
+              console.error(
+                'WebSocket error:',
+                event
+              );
+
+              this.onStatus(
+                'error'
+              );
+
+              reject(
+                new Error(
+                  'WebSocket connection failed'
+                )
+              );
+            };
+
+          this.socket.onclose =
+            () => {
+              this.onStatus(
+                'disconnected'
+              );
+
+              this.socket =
+                null;
+            };
+        } catch (
+          error
+        ) {
+          this.onStatus(
+            'error'
+          );
+
+          reject(
+            error
+          );
+        }
+      }
+    );
   }
 
-  private setStatus(status: ConnectionStatus): void {
-    this.statusHandler?.(status);
+  send(
+    message:
+      ClientMessage
+  ): boolean {
+    if (
+      !this.socket ||
+      this.socket.readyState !==
+        WebSocket.OPEN
+    ) {
+      return false;
+    }
+
+    this.socket.send(
+      JSON.stringify(
+        message
+      )
+    );
+
+    return true;
+  }
+
+  isConnected():
+    boolean {
+    return (
+      this.socket
+        ?.readyState ===
+        WebSocket.OPEN
+    );
+  }
+
+  close():
+    void {
+    if (!this.socket) {
+      return;
+    }
+
+    this.socket.close();
+
+    this.socket =
+      null;
   }
 }
+
+export const connection =
+  new GameWebSocket();

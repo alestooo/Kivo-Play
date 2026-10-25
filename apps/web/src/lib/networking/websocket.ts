@@ -18,7 +18,7 @@ const DEFAULT_URL =
         PRODUCTION_WS_URL
       );
 
-export class GameWebSocket {
+export class KivoWebSocket {
   private socket:
     WebSocket | null =
       null;
@@ -207,5 +207,8 @@ export class GameWebSocket {
   }
 }
 
+export const GameWebSocket =
+  KivoWebSocket;
+
 export const connection =
-  new GameWebSocket();
+  new KivoWebSocket();
